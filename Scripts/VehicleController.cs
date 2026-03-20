@@ -77,6 +77,8 @@ public class VehicleController : MonoBehaviour
     public GameObject explosionEffect;
     public GameObject hitEffect;
     public GameObject shieldHitEffect;
+    public GameObject exhaustEffect;
+    public GameObject boostTrailEffect;
     
     [Header("Audio")]
     public AudioClip machineGunSound;
@@ -92,6 +94,8 @@ public class VehicleController : MonoBehaviour
     private Camera playerCamera;
     private AudioSource audioSource;
     private bool isPlayerInside = false;
+    private GameObject activeExhaustEffect;
+    private GameObject activeBoostTrail;
     
     void Start()
     {
@@ -133,6 +137,13 @@ public class VehicleController : MonoBehaviour
             UIManager.Instance.UpdateCurrentWeapon("Machine Gun");
         }
         
+        // Spawn exhaust effect
+        if (exhaustEffect)
+        {
+            activeExhaustEffect = Instantiate(exhaustEffect, transform.position - transform.forward * 2f, transform.rotation);
+            activeExhaustEffect.transform.parent = transform;
+        }
+        
         Debug.Log("Vehicle armed and ready!");
     }
     
@@ -146,6 +157,7 @@ public class VehicleController : MonoBehaviour
         UpdateShield();
         UpdateUI();
         HandleEnterExit();
+        UpdateVisualEffects();
     }
     
     void HandleDriving()
@@ -175,6 +187,12 @@ public class VehicleController : MonoBehaviour
         {
             Vector3 brakeForceVector = -rb.linearVelocity.normalized * brakeForce * Time.deltaTime;
             rb.AddForce(brakeForceVector);
+            
+            // Spawn brake smoke effect
+            if (EffectManager.Instance && currentSpeed > 5f)
+            {
+                EffectManager.Instance.SpawnEffect("Smoke", transform.position - transform.forward * 1.5f, 0.2f);
+            }
         }
         
         // Limit speed
@@ -193,6 +211,13 @@ public class VehicleController : MonoBehaviour
         transform.Rotate(0, turnAmount, 0);
         
         currentSpeed = rb.linearVelocity.magnitude;
+        
+        // Tire smoke on sharp turns
+        if (EffectManager.Instance && Mathf.Abs(turn) > 0.7f && currentSpeed > 10f)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position - transform.right * 1f, 0.1f);
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position + transform.right * 1f, 0.1f);
+        }
     }
     
     void HandleWeapons()
@@ -335,6 +360,12 @@ public class VehicleController : MonoBehaviour
             Destroy(flash, 0.1f);
         }
         
+        // Spawn muzzle spark effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Spark", machineGunPoint.transform.position, 0.1f);
+        }
+        
         // Play machine gun sound
         if (AudioManager.Instance)
         {
@@ -354,6 +385,12 @@ public class VehicleController : MonoBehaviour
                 {
                     enemy.TakeDamage(machineGunDamage);
                     Debug.Log($"Machine Gun hit enemy for {machineGunDamage} damage!");
+                    
+                    // Spawn hit effect
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(hit.point, hit.normal);
+                    }
                 }
             }
             
@@ -383,6 +420,12 @@ public class VehicleController : MonoBehaviour
         if (AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFX("Rocket");
+        }
+        
+        // Spawn rocket smoke trail effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", rocketPoint.transform.position, 0.5f);
         }
         
         // Spawn rocket
@@ -429,6 +472,12 @@ public class VehicleController : MonoBehaviour
             AudioManager.Instance.PlaySFX("MineDrop");
         }
         
+        // Spawn mine drop effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position - transform.forward * 2f, 0.5f);
+        }
+        
         // Spawn mine behind vehicle
         if (minePrefab)
         {
@@ -462,6 +511,12 @@ public class VehicleController : MonoBehaviour
             AudioManager.Instance.PlaySFX("Ram");
         }
         
+        // Spawn ram effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Spark", transform.position + transform.forward * 2f, 0.3f);
+        }
+        
         // Boost forward
         Vector3 ramForceVector = transform.forward * ramForce;
         rb.AddForce(ramForceVector, ForceMode.Impulse);
@@ -477,6 +532,12 @@ public class VehicleController : MonoBehaviour
                 {
                     enemy.TakeDamage(ramDamage);
                     Debug.Log($"Vehicle rammed enemy for {ramDamage} damage!");
+                    
+                    // Spawn impact effect
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(hit.transform.position, transform.forward);
+                    }
                     
                     // Knockback enemy
                     Rigidbody enemyRb = hit.GetComponent<Rigidbody>();
@@ -517,6 +578,12 @@ public class VehicleController : MonoBehaviour
         if (AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFX("ShieldActivate");
+        }
+        
+        // Spawn shield effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Shield", transform.position, 1f);
         }
         
         if (UIManager.Instance)
@@ -598,6 +665,19 @@ public class VehicleController : MonoBehaviour
             AudioManager.Instance.PlaySFX("Nitrous");
         }
         
+        // Spawn boost trail effect
+        if (boostTrailEffect)
+        {
+            activeBoostTrail = Instantiate(boostTrailEffect, transform.position - transform.forward * 1.5f, transform.rotation);
+            activeBoostTrail.transform.parent = transform;
+        }
+        
+        // Spawn exhaust flame effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Fire", transform.position - transform.forward * 2f, nitrousDuration);
+        }
+        
         // Camera shake on nitrous
         if (CameraController.Instance)
         {
@@ -618,12 +698,38 @@ public class VehicleController : MonoBehaviour
         
         nitrousActive = false;
         
+        // Remove boost trail
+        if (activeBoostTrail)
+        {
+            Destroy(activeBoostTrail);
+        }
+        
         if (UIManager.Instance)
         {
             UIManager.Instance.ShowNotification("NITROUS DEPLETED");
         }
         
         Debug.Log("Nitrous boost ended");
+    }
+    
+    void UpdateVisualEffects()
+    {
+        // Update exhaust effect intensity based on speed
+        if (activeExhaustEffect)
+        {
+            ParticleSystem exhaustPS = activeExhaustEffect.GetComponent<ParticleSystem>();
+            if (exhaustPS)
+            {
+                var emission = exhaustPS.emission;
+                emission.rateOverTime = Mathf.Lerp(5f, 50f, currentSpeed / maxSpeed);
+            }
+        }
+        
+        // Speed lines effect at high speed
+        if (EffectManager.Instance && currentSpeed > maxSpeed * 0.7f && isPlayerInside)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position - transform.forward * 1f, 0.1f);
+        }
     }
     
     IEnumerator CameraShake(float duration, float magnitude)
@@ -667,6 +773,12 @@ public class VehicleController : MonoBehaviour
             {
                 enemy.TakeDamage(ramDamage);
                 Debug.Log($"Vehicle rammed enemy for {ramDamage} damage!");
+                
+                // Spawn impact effect
+                if (EffectManager.Instance)
+                {
+                    EffectManager.Instance.SpawnHitImpact(collision.contacts[0].point, collision.contacts[0].normal);
+                }
             }
             
             // Impact force on vehicle
@@ -677,6 +789,15 @@ public class VehicleController : MonoBehaviour
             if (UIManager.Instance)
             {
                 UIManager.Instance.ShowNotification("CRASH!");
+            }
+        }
+        
+        // Spawn impact spark on wall collision
+        if (collision.gameObject.CompareTag("Wall") && currentSpeed > 10f)
+        {
+            if (EffectManager.Instance)
+            {
+                EffectManager.Instance.SpawnEffect("Spark", collision.contacts[0].point, 0.2f);
             }
         }
     }
@@ -698,6 +819,12 @@ public class VehicleController : MonoBehaviour
                 Instantiate(shieldHitEffect, transform.position, Quaternion.identity);
             }
             
+            // Spawn shield hit effect
+            if (EffectManager.Instance)
+            {
+                EffectManager.Instance.SpawnEffect("Spark", transform.position, 0.2f);
+            }
+            
             // Play shield hit sound
             if (AudioManager.Instance)
             {
@@ -717,6 +844,13 @@ public class VehicleController : MonoBehaviour
             if (hitEffect)
             {
                 Instantiate(hitEffect, transform.position, Quaternion.identity);
+            }
+            
+            // Spawn damage effect
+            if (EffectManager.Instance)
+            {
+                EffectManager.Instance.SpawnEffect("Smoke", transform.position, 0.5f);
+                EffectManager.Instance.SpawnEffect("Spark", transform.position, 0.3f);
             }
             
             // Play vehicle damage sound
@@ -756,6 +890,12 @@ public class VehicleController : MonoBehaviour
             AudioManager.Instance.PlaySFX("VehicleExplosion");
         }
         
+        // Spawn explosion effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnExplosion(transform.position);
+        }
+        
         // Explosion effect
         if (explosionEffect)
         {
@@ -776,6 +916,12 @@ public class VehicleController : MonoBehaviour
         {
             UIManager.Instance.ShowNotification("VEHICLE DESTROYED!");
             UIManager.Instance.ShowVehicleUI(false);
+        }
+        
+        // Remove exhaust effect
+        if (activeExhaustEffect)
+        {
+            Destroy(activeExhaustEffect);
         }
         
         // Eject player
@@ -803,6 +949,12 @@ public class VehicleController : MonoBehaviour
                 mineAmmo = Mathf.Min(mineAmmo + amount, maxMineAmmo);
                 if (UIManager.Instance) UIManager.Instance.UpdateMineAmmo(mineAmmo, maxMineAmmo);
                 break;
+        }
+        
+        // Spawn ammo pickup effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Heal", transform.position, 0.5f);
         }
         
         if (UIManager.Instance)

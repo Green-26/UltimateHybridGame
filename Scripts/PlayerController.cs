@@ -109,6 +109,13 @@ public class PlayerController : MonoBehaviour
         {
             AudioManager.Instance.PlayMusic("Gameplay");
         }
+        
+        // Initialize EffectManager if needed
+        if (EffectManager.Instance == null)
+        {
+            GameObject effectManager = new GameObject("EffectManager");
+            effectManager.AddComponent<EffectManager>();
+        }
     }
     
     void Update()
@@ -417,6 +424,12 @@ public class PlayerController : MonoBehaviour
                 {
                     enemy.TakeDamage(finalDamage);
                     Debug.Log($"{attackName} hit enemy for {finalDamage} damage!");
+                    
+                    // Spawn hit effect
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(hit.point, hit.normal);
+                    }
                 }
             }
         }
@@ -459,6 +472,12 @@ public class PlayerController : MonoBehaviour
                 {
                     enemyScript.TakeDamage(powerPunchDamage);
                     Debug.Log($"💥 POWER PUNCH! {powerPunchDamage} damage! 💥");
+                    
+                    // Spawn hit effect
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(enemy.transform.position, transform.forward);
+                    }
                 }
             }
         }
@@ -505,6 +524,12 @@ public class PlayerController : MonoBehaviour
                 {
                     enemyScript.TakeDamage(roundhouseKickDamage);
                     enemiesHit++;
+                    
+                    // Spawn hit effect
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(enemy.transform.position, transform.forward);
+                    }
                 }
             }
         }
@@ -566,6 +591,12 @@ public class PlayerController : MonoBehaviour
             }
         }
         
+        // Spawn ground slam effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnGroundSlam(transform.position);
+        }
+        
         // Camera shake for ground slam
         if (CameraController.Instance)
         {
@@ -594,6 +625,12 @@ public class PlayerController : MonoBehaviour
             Instantiate(ultimateEffect, transform.position, Quaternion.identity);
         }
         
+        // Spawn ultimate particle effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnUltimate(transform.position);
+        }
+        
         // Massive area damage
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, ultimateRange);
         int enemiesHit = 0;
@@ -607,6 +644,12 @@ public class PlayerController : MonoBehaviour
                 {
                     enemyScript.TakeDamage(ultimateDamage);
                     enemiesHit++;
+                    
+                    // Spawn explosion effect on each enemy
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnExplosion(enemy.transform.position);
+                    }
                 }
             }
         }
@@ -647,6 +690,12 @@ public class PlayerController : MonoBehaviour
             AudioManager.Instance.PlaySFX("Dash");
         }
         
+        // Spawn dash trail effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnDashTrail(transform, dashDuration);
+        }
+        
         // Play dash animation
         if (animator) animator.SetTrigger("Dash");
         
@@ -665,6 +714,12 @@ public class PlayerController : MonoBehaviour
                     {
                         enemy.TakeDamage(dashDamage);
                         Debug.Log($"💥 DASH ATTACK! {dashDamage} damage! 💥");
+                        
+                        // Spawn hit effect
+                        if (EffectManager.Instance)
+                        {
+                            EffectManager.Instance.SpawnHitImpact(hit.point, dashDirection);
+                        }
                         
                         // Knockback enemy
                         Rigidbody enemyRb = hit.collider.GetComponent<Rigidbody>();
@@ -799,6 +854,12 @@ public class PlayerController : MonoBehaviour
             AudioManager.Instance.PlaySFX("Damage");
         }
         
+        // Spawn blood effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnBlood(transform.position);
+        }
+        
         // Start invincibility frames
         isInvincible = true;
         invincibilityTimer = invincibilityDuration;
@@ -839,11 +900,23 @@ public class PlayerController : MonoBehaviour
             AudioManager.Instance.PlayMusic("GameOver");
         }
         
+        // Spawn death explosion
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnExplosion(transform.position);
+        }
+        
         // Show game over UI
         if (UIManager.Instance)
         {
             int finalScore = GameManager.Instance ? GameManager.Instance.score : 0;
             UIManager.Instance.ShowGameOver(finalScore);
+        }
+        
+        // Save game on death
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SaveGame();
         }
         
         enabled = false;

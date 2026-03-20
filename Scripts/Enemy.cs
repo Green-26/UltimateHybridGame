@@ -93,6 +93,12 @@ public class Enemy : MonoBehaviour
             }
         }
         
+        // Spawn spawn effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position, 0.5f);
+        }
+        
         Debug.Log($"{enemyType} Enemy spawned! Health: {health}, Speed: {speed}, Damage: {damage}");
     }
     
@@ -341,6 +347,12 @@ public class Enemy : MonoBehaviour
             projScript.damage = damage;
         }
         
+        // Spawn muzzle flash effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Spark", transform.position + transform.forward * 1.5f, 0.2f);
+        }
+        
         Debug.Log($"{enemyType} enemy shoots projectile!");
     }
     
@@ -354,6 +366,12 @@ public class Enemy : MonoBehaviour
         if (AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFXAtPosition("Heal", transform.position);
+        }
+        
+        // Spawn heal effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Heal", transform.position, 1f);
         }
         
         Debug.Log($"BOSS HEALS! Health: {health}/{maxHealth}");
@@ -375,6 +393,12 @@ public class Enemy : MonoBehaviour
             AudioManager.Instance.PlaySFXAtPosition("EnemySpawn", transform.position);
         }
         
+        // Spawn summon effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position, 1f);
+        }
+        
         for (int i = 0; i < minionCount; i++)
         {
             if (minionPrefab)
@@ -388,6 +412,12 @@ public class Enemy : MonoBehaviour
                 {
                     minionEnemy.enemyType = EnemyType.Normal;
                     minionEnemy.SetStatsByType();
+                }
+                
+                // Spawn spawn effect for each minion
+                if (EffectManager.Instance)
+                {
+                    EffectManager.Instance.SpawnEffect("Smoke", spawnPosition, 0.5f);
                 }
             }
         }
@@ -403,6 +433,13 @@ public class Enemy : MonoBehaviour
         if (AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFXAtPosition("GroundSlam", transform.position);
+        }
+        
+        // Spawn area attack effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("GroundSlam", transform.position, 0.8f);
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position, 1f);
         }
         
         // Create visual effect
@@ -431,6 +468,12 @@ public class Enemy : MonoBehaviour
             {
                 playerRb.AddForce(knockbackDirection * 800f, ForceMode.Impulse);
             }
+        }
+        
+        // Camera shake
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.3f, 0.2f);
         }
         
         Debug.Log($"BOSS AREA ATTACK! {areaAttackDamage} damage in radius!");
@@ -469,6 +512,12 @@ public class Enemy : MonoBehaviour
             AudioManager.Instance.PlaySFXAtPosition("EnemyHit", transform.position);
         }
         
+        // Spawn hit effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnHitImpact(transform.position, transform.forward);
+        }
+        
         // Hit effect
         if (hitEffect)
         {
@@ -493,6 +542,12 @@ public class Enemy : MonoBehaviour
         if (AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFXAtPosition("EnemyDeath", transform.position);
+        }
+        
+        // Spawn death explosion effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnExplosion(transform.position);
         }
         
         // Explosive enemy explodes on death
@@ -540,6 +595,12 @@ public class Enemy : MonoBehaviour
             AudioManager.Instance.PlaySFXAtPosition("VehicleExplosion", transform.position);
         }
         
+        // Spawn explosion effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnExplosion(transform.position);
+        }
+        
         // Damage all enemies and player in radius
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
         foreach (Collider hit in hitColliders)
@@ -550,6 +611,12 @@ public class Enemy : MonoBehaviour
                 if (enemy)
                 {
                     enemy.TakeDamage(explosionDamage);
+                    
+                    // Spawn hit effect on nearby enemies
+                    if (EffectManager.Instance)
+                    {
+                        EffectManager.Instance.SpawnHitImpact(hit.transform.position, Vector3.up);
+                    }
                 }
             }
             else if (hit.CompareTag("Player"))
@@ -566,6 +633,12 @@ public class Enemy : MonoBehaviour
         if (explosionEffect)
         {
             Instantiate(explosionEffect, transform.position, Quaternion.identity);
+        }
+        
+        // Camera shake
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.4f, 0.3f);
         }
         
         Debug.Log($"💥 EXPLOSIVE ENEMY EXPLODES! {explosionDamage} damage in radius! 💥");
