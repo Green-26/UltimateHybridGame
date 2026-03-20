@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
@@ -10,6 +11,63 @@ public class PlayerController : MonoBehaviour
     [Header("Combat")]
     public float punchDamage = 15f;
     public float punchRange = 2f;
+    public float kickDamage = 25f;
+    public float kickRange = 2.5f;
+    public float attackCooldown = 0.5f;
+    
+    [Header("Special Moves")]
+    public float powerPunchDamage = 40f;
+    public float powerPunchCooldown = 3f;
+    private float powerPunchTimer = 0f;
+    private bool powerPunchReady = true;
+    
+    public float roundhouseKickDamage = 50f;
+    public float roundhouseKickCooldown = 4f;
+    private float roundhouseKickTimer = 0f;
+    private bool roundhouseKickReady = true;
+    
+    public float groundSlamDamage = 60f;
+    public float groundSlamRadius = 3f;
+    public float groundSlamCooldown = 5f;
+    private float groundSlamTimer = 0f;
+    private bool groundSlamReady = true;
+    
+    [Header("Ultimate Move")]
+    public float ultimateDamage = 100f;
+    public float ultimateCooldown = 10f;
+    public float ultimateRange = 5f;
+    private float ultimateTimer = 0f;
+    private bool ultimateReady = true;
+    public int ultimateRequiredCombo = 5;
+    private int currentCombo = 0;
+    private float lastAttackTime;
+    private float comboTimeWindow = 1.5f;
+    
+    [Header("Dash/Roll Movement")]
+    public float dashDistance = 5f;
+    public float dashDuration = 0.2f;
+    public float dashCooldown = 1f;
+    private float dashTimer = 0f;
+    private bool dashReady = true;
+    private bool isDashing = false;
+    private Vector3 dashDirection;
+    
+    public float rollDistance = 4f;
+    public float rollDuration = 0.3f;
+    public float rollCooldown = 1.5f;
+    private float rollTimer = 0f;
+    private bool rollReady = true;
+    private bool isRolling = false;
+    private Vector3 rollDirection;
+    
+    public float dashDamage = 25f;
+    public bool dashDamagesEnemies = true;
+    
+    [Header("Effects")]
+    public GameObject powerPunchEffect;
+    public GameObject roundhouseKickEffect;
+    public GameObject groundSlamEffect;
+    public GameObject ultimateEffect;
     
     [Header("Health")]
     public float maxHealth = 100f;
@@ -27,6 +85,7 @@ public class PlayerController : MonoBehaviour
     private float currentSpeed;
     private bool isGrounded;
     private Animator animator;
+    private bool canAttack = true;
     
     void Start()
     {
@@ -53,7 +112,86 @@ public class PlayerController : MonoBehaviour
         
         if (isDead) return;
         
-        // Movement
+        // Update cooldowns
+        UpdateCooldowns();
+        
+        // Update combo timer
+        if (Time.time - lastAttackTime > comboTimeWindow)
+        {
+            currentCombo = 0;
+        }
+        
+        HandleMovement();
+        HandleCombat();
+        HandleSpecialMoves();
+        HandleDashAndRoll();
+    }
+    
+    void UpdateCooldowns()
+    {
+        if (!powerPunchReady)
+        {
+            powerPunchTimer -= Time.deltaTime;
+            if (powerPunchTimer <= 0f)
+            {
+                powerPunchReady = true;
+                Debug.Log("POWER PUNCH READY!");
+            }
+        }
+        
+        if (!roundhouseKickReady)
+        {
+            roundhouseKickTimer -= Time.deltaTime;
+            if (roundhouseKickTimer <= 0f)
+            {
+                roundhouseKickReady = true;
+                Debug.Log("ROUNDHOUSE KICK READY!");
+            }
+        }
+        
+        if (!groundSlamReady)
+        {
+            groundSlamTimer -= Time.deltaTime;
+            if (groundSlamTimer <= 0f)
+            {
+                groundSlamReady = true;
+                Debug.Log("GROUND SLAM READY!");
+            }
+        }
+        
+        if (!ultimateReady)
+        {
+            ultimateTimer -= Time.deltaTime;
+            if (ultimateTimer <= 0f)
+            {
+                ultimateReady = true;
+                Debug.Log("ULTIMATE MOVE READY!");
+            }
+        }
+        
+        if (!dashReady)
+        {
+            dashTimer -= Time.deltaTime;
+            if (dashTimer <= 0f)
+            {
+                dashReady = true;
+                Debug.Log("⚡ DASH READY! ⚡");
+            }
+        }
+        
+        if (!rollReady)
+        {
+            rollTimer -= Time.deltaTime;
+            if (rollTimer <= 0f)
+            {
+                rollReady = true;
+                Debug.Log("🌀 ROLL READY! 🌀");
+            }
+        }
+    }
+    
+    void HandleMovement()
+    {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
         
@@ -62,38 +200,480 @@ public class PlayerController : MonoBehaviour
         transform.Translate(move, Space.World);
         
         // Run with Left Shift
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (Input.GetKey(KeyCode.LeftShift) && !isDashing && !isRolling)
             currentSpeed = runSpeed;
         else
             currentSpeed = walkSpeed;
         
         // Jump
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isDashing && !isRolling)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             isGrounded = false;
         }
+    }
+    
+    void HandleCombat()
+    {
+        if (!canAttack || isDashing || isRolling) return;
         
-        // Punch (Left Mouse Button)
+        // Light Punch (Left Mouse)
         if (Input.GetMouseButtonDown(0))
         {
-            Punch();
+            PerformAttack("Punch", punchDamage, punchRange);
+            UpdateCombo();
+        }
+        
+        // Heavy Kick (Right Mouse)
+        if (Input.GetMouseButtonDown(1))
+        {
+            PerformAttack("Kick", kickDamage, kickRange);
+            UpdateCombo();
         }
     }
     
-    void Punch()
+    void HandleSpecialMoves()
     {
-        Debug.Log("PUNCH!");
+        if (isDashing || isRolling || isDead) return;
         
-        Ray ray = new Ray(transform.position + Vector3.up, transform.forward);
+        // Power Punch (Q key)
+        if (Input.GetKeyDown(KeyCode.Q) && powerPunchReady)
+        {
+            PowerPunch();
+        }
+        
+        // Roundhouse Kick (E key)
+        if (Input.GetKeyDown(KeyCode.E) && roundhouseKickReady)
+        {
+            RoundhouseKick();
+        }
+        
+        // Ground Slam (R key)
+        if (Input.GetKeyDown(KeyCode.R) && groundSlamReady)
+        {
+            GroundSlam();
+        }
+        
+        // Ultimate Move (F key) - requires combo
+        if (Input.GetKeyDown(KeyCode.F) && ultimateReady && currentCombo >= ultimateRequiredCombo)
+        {
+            UltimateMove();
+        }
+    }
+    
+    void HandleDashAndRoll()
+    {
+        // Dash (Left Shift + Direction) - only when not already dashing/rolling
+        if (Input.GetKeyDown(KeyCode.LeftShift) && dashReady && !isDashing && !isRolling && !isDead)
+        {
+            // Get movement direction
+            float horizontal = Input.GetAxis("Horizontal");
+            float vertical = Input.GetAxis("Vertical");
+            
+            dashDirection = new Vector3(horizontal, 0, vertical).normalized;
+            
+            // If no input, dash forward
+            if (dashDirection.magnitude < 0.1f)
+            {
+                dashDirection = transform.forward;
+            }
+            
+            StartDash();
+        }
+        
+        // Roll (Left Control or C)
+        if ((Input.GetKeyDown(KeyCode.LeftControl) || Input.GetKeyDown(KeyCode.C)) && rollReady && !isRolling && !isDashing && !isDead)
+        {
+            // Get movement direction
+            float horizontal = Input.GetAxis("Horizontal");
+            float vertical = Input.GetAxis("Vertical");
+            
+            rollDirection = new Vector3(horizontal, 0, vertical).normalized;
+            
+            // If no input, roll backward
+            if (rollDirection.magnitude < 0.1f)
+            {
+                rollDirection = -transform.forward;
+            }
+            
+            StartRoll();
+        }
+        
+        // Update dash
+        if (isDashing)
+        {
+            UpdateDash();
+        }
+        
+        // Update roll
+        if (isRolling)
+        {
+            UpdateRoll();
+        }
+    }
+    
+    void UpdateCombo()
+    {
+        if (Time.time - lastAttackTime <= comboTimeWindow)
+        {
+            currentCombo++;
+            Debug.Log($"🔥 COMBO x{currentCombo} 🔥");
+        }
+        else
+        {
+            currentCombo = 1;
+        }
+        lastAttackTime = Time.time;
+    }
+    
+    void PerformAttack(string attackName, float damage, float range)
+    {
+        canAttack = false;
+        
+        if (animator) animator.SetTrigger(attackName);
+        
+        // Combo bonus
+        float finalDamage = damage;
+        if (currentCombo >= 3)
+        {
+            finalDamage = damage * 1.5f;
+            Debug.Log($"COMBO BONUS! +50% damage!");
+        }
+        if (currentCombo >= 5)
+        {
+            finalDamage = damage * 2f;
+            Debug.Log($"SUPER COMBO! +100% damage!");
+        }
+        
+        // Raycast for hit
+        Ray ray = new Ray(transform.position + Vector3.up * 1f, transform.forward);
         RaycastHit hit;
         
-        if (Physics.Raycast(ray, out hit, punchRange))
+        if (Physics.Raycast(ray, out hit, range))
         {
             if (hit.collider.CompareTag("Enemy"))
             {
-                Debug.Log("HIT ENEMY!");
+                Enemy enemy = hit.collider.GetComponent<Enemy>();
+                if (enemy)
+                {
+                    enemy.TakeDamage(finalDamage);
+                    Debug.Log($"{attackName} hit enemy for {finalDamage} damage!");
+                }
             }
+        }
+        
+        Invoke("ResetAttack", attackCooldown);
+    }
+    
+    void ResetAttack()
+    {
+        canAttack = true;
+    }
+    
+    void PowerPunch()
+    {
+        powerPunchReady = false;
+        powerPunchTimer = powerPunchCooldown;
+        
+        if (animator) animator.SetTrigger("PowerPunch");
+        
+        // Spawn effect
+        if (powerPunchEffect)
+        {
+            Instantiate(powerPunchEffect, transform.position + transform.forward * 2f, Quaternion.identity);
+        }
+        
+        // Area damage
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position + transform.forward * 2f, 2f);
+        foreach (Collider enemy in hitEnemies)
+        {
+            if (enemy.CompareTag("Enemy"))
+            {
+                Enemy enemyScript = enemy.GetComponent<Enemy>();
+                if (enemyScript)
+                {
+                    enemyScript.TakeDamage(powerPunchDamage);
+                    Debug.Log($"💥 POWER PUNCH! {powerPunchDamage} damage! 💥");
+                }
+            }
+        }
+        
+        // Knockback effect
+        rb.AddForce(transform.forward * 500f, ForceMode.Impulse);
+    }
+    
+    void RoundhouseKick()
+    {
+        roundhouseKickReady = false;
+        roundhouseKickTimer = roundhouseKickCooldown;
+        
+        if (animator) animator.SetTrigger("RoundhouseKick");
+        
+        // Spawn effect
+        if (roundhouseKickEffect)
+        {
+            Instantiate(roundhouseKickEffect, transform.position, Quaternion.identity);
+        }
+        
+        // 360-degree damage
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, 2.5f);
+        int enemiesHit = 0;
+        
+        foreach (Collider enemy in hitEnemies)
+        {
+            if (enemy.CompareTag("Enemy"))
+            {
+                Enemy enemyScript = enemy.GetComponent<Enemy>();
+                if (enemyScript)
+                {
+                    enemyScript.TakeDamage(roundhouseKickDamage);
+                    enemiesHit++;
+                }
+            }
+        }
+        
+        Debug.Log($"🌀 ROUNDHOUSE KICK! Hit {enemiesHit} enemies for {roundhouseKickDamage} damage! 🌀");
+    }
+    
+    void GroundSlam()
+    {
+        groundSlamReady = false;
+        groundSlamTimer = groundSlamCooldown;
+        
+        if (animator) animator.SetTrigger("GroundSlam");
+        
+        // Spawn effect
+        if (groundSlamEffect)
+        {
+            Instantiate(groundSlamEffect, transform.position, Quaternion.identity);
+        }
+        
+        // Jump then slam
+        rb.AddForce(Vector3.up * 5f, ForceMode.Impulse);
+        Invoke("SlamDown", 0.3f);
+    }
+    
+    void SlamDown()
+    {
+        rb.AddForce(Vector3.down * 20f, ForceMode.Impulse);
+        
+        // Area damage
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, groundSlamRadius);
+        foreach (Collider enemy in hitEnemies)
+        {
+            if (enemy.CompareTag("Enemy"))
+            {
+                Enemy enemyScript = enemy.GetComponent<Enemy>();
+                if (enemyScript)
+                {
+                    enemyScript.TakeDamage(groundSlamDamage);
+                }
+            }
+        }
+        
+        // Camera shake effect
+        StartCoroutine(CameraShake());
+        
+        Debug.Log($"🌍 GROUND SLAM! {groundSlamDamage} damage in radius! 🌍");
+    }
+    
+    void UltimateMove()
+    {
+        ultimateReady = false;
+        ultimateTimer = ultimateCooldown;
+        
+        if (animator) animator.SetTrigger("Ultimate");
+        
+        // Spawn effect
+        if (ultimateEffect)
+        {
+            Instantiate(ultimateEffect, transform.position, Quaternion.identity);
+        }
+        
+        // Massive area damage
+        Collider[] hitEnemies = Physics.OverlapSphere(transform.position, ultimateRange);
+        int enemiesHit = 0;
+        
+        foreach (Collider enemy in hitEnemies)
+        {
+            if (enemy.CompareTag("Enemy"))
+            {
+                Enemy enemyScript = enemy.GetComponent<Enemy>();
+                if (enemyScript)
+                {
+                    enemyScript.TakeDamage(ultimateDamage);
+                    enemiesHit++;
+                }
+            }
+        }
+        
+        // Reset combo after ultimate
+        currentCombo = 0;
+        
+        Debug.Log($"✨ ULTIMATE MOVE! {enemiesHit} enemies destroyed for {ultimateDamage} damage! ✨");
+    }
+    
+    void StartDash()
+    {
+        isDashing = true;
+        dashReady = false;
+        dashTimer = dashCooldown;
+        
+        // Set invincible during dash
+        isInvincible = true;
+        invincibilityTimer = dashDuration;
+        
+        // Play dash animation
+        if (animator) animator.SetTrigger("Dash");
+        
+        Debug.Log($"⚡ DASH! ⚡");
+        
+        // Damage enemies in path
+        if (dashDamagesEnemies)
+        {
+            RaycastHit[] hits = Physics.SphereCastAll(transform.position, 1.5f, dashDirection, dashDistance);
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider.CompareTag("Enemy"))
+                {
+                    Enemy enemy = hit.collider.GetComponent<Enemy>();
+                    if (enemy)
+                    {
+                        enemy.TakeDamage(dashDamage);
+                        Debug.Log($"💥 DASH ATTACK! {dashDamage} damage! 💥");
+                        
+                        // Knockback enemy
+                        Rigidbody enemyRb = hit.collider.GetComponent<Rigidbody>();
+                        if (enemyRb)
+                        {
+                            enemyRb.AddForce(dashDirection * 500f, ForceMode.Impulse);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Disable normal movement during dash
+        StartCoroutine(PerformDash());
+    }
+    
+    IEnumerator PerformDash()
+    {
+        float startTime = Time.time;
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition + dashDirection * dashDistance;
+        
+        while (Time.time - startTime < dashDuration)
+        {
+            float t = (Time.time - startTime) / dashDuration;
+            transform.position = Vector3.Lerp(startPosition, targetPosition, t);
+            
+            // Create trail effect
+            CreateDashTrail();
+            
+            yield return null;
+        }
+        
+        // Final position
+        transform.position = targetPosition;
+        isDashing = false;
+        
+        Debug.Log("⚡ Dash complete! ⚡");
+    }
+    
+    void UpdateDash()
+    {
+        // Additional dash logic if needed
+    }
+    
+    void StartRoll()
+    {
+        isRolling = true;
+        rollReady = false;
+        rollTimer = rollCooldown;
+        
+        // Set invincible during roll
+        isInvincible = true;
+        invincibilityTimer = rollDuration;
+        
+        // Play roll animation
+        if (animator) animator.SetTrigger("Roll");
+        
+        Debug.Log($"🌀 ROLL! 🌀");
+        
+        // Start roll movement
+        StartCoroutine(PerformRoll());
+    }
+    
+    IEnumerator PerformRoll()
+    {
+        float startTime = Time.time;
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition + rollDirection * rollDistance;
+        
+        // Reduce player scale slightly during roll
+        Vector3 originalScale = transform.localScale;
+        transform.localScale = new Vector3(originalScale.x, originalScale.y * 0.7f, originalScale.z);
+        
+        while (Time.time - startTime < rollDuration)
+        {
+            float t = (Time.time - startTime) / rollDuration;
+            
+            // Smooth movement with easing
+            float easeT = 1 - Mathf.Pow(1 - t, 2);
+            transform.position = Vector3.Lerp(startPosition, targetPosition, easeT);
+            
+            // Rotation effect
+            transform.Rotate(0, 360 * Time.deltaTime, 0);
+            
+            yield return null;
+        }
+        
+        // Reset scale
+        transform.localScale = originalScale;
+        
+        // Reset rotation
+        transform.rotation = Quaternion.identity;
+        
+        isRolling = false;
+        
+        Debug.Log("🌀 Roll complete! 🌀");
+    }
+    
+    void UpdateRoll()
+    {
+        // Additional roll logic if needed
+    }
+    
+    void CreateDashTrail()
+    {
+        // Create simple trail effect
+        GameObject trail = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        trail.transform.localScale = Vector3.one * 0.3f;
+        trail.transform.position = transform.position - dashDirection * 0.5f;
+        trail.GetComponent<Renderer>().material.color = Color.cyan;
+        Destroy(trail, 0.1f);
+    }
+    
+    IEnumerator CameraShake()
+    {
+        Camera mainCam = Camera.main;
+        if (mainCam)
+        {
+            Vector3 originalPos = mainCam.transform.localPosition;
+            float shakeTime = 0.2f;
+            float shakeAmount = 0.1f;
+            
+            float elapsed = 0f;
+            while (elapsed < shakeTime)
+            {
+                float x = Random.Range(-shakeAmount, shakeAmount);
+                float y = Random.Range(-shakeAmount, shakeAmount);
+                mainCam.transform.localPosition = originalPos + new Vector3(x, y, 0);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            mainCam.transform.localPosition = originalPos;
         }
     }
     
@@ -109,6 +689,9 @@ public class PlayerController : MonoBehaviour
         isInvincible = true;
         invincibilityTimer = invincibilityDuration;
         
+        // Reset combo when hit
+        currentCombo = 0;
+        
         // Check for death
         if (currentHealth <= 0)
         {
@@ -119,9 +702,7 @@ public class PlayerController : MonoBehaviour
     void Die()
     {
         isDead = true;
-        Debug.Log("GAME OVER! Player has died.");
-        
-        // Disable player movement
+        Debug.Log("💀 GAME OVER! 💀");
         enabled = false;
     }
     
@@ -129,16 +710,59 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
         
-        // Health bar background
-        GUI.Box(new Rect(10, 10, healthBarWidth, healthBarHeight), "");
+        float yPos = 10;
         
-        // Health bar fill
+        // Health bar
         float healthPercent = currentHealth / maxHealth;
+        GUI.Box(new Rect(10, yPos, healthBarWidth, healthBarHeight), "");
         GUI.backgroundColor = Color.red;
-        GUI.Box(new Rect(10, 10, healthBarWidth * healthPercent, healthBarHeight), "");
+        GUI.Box(new Rect(10, yPos, healthBarWidth * healthPercent, healthBarHeight), "");
+        GUI.Label(new Rect(15, yPos + 2, 100, 20), $"{currentHealth}/{maxHealth}");
         
-        // Health text
-        GUI.Label(new Rect(15, 12, 100, 20), $"{currentHealth}/{maxHealth}");
+        GUI.backgroundColor = Color.white;
+        
+        // Combo counter
+        if (currentCombo > 0)
+        {
+            GUI.color = Color.yellow;
+            GUI.Label(new Rect(Screen.width / 2 - 50, Screen.height - 80, 100, 50), 
+                      $"x{currentCombo} COMBO!");
+            GUI.color = Color.white;
+        }
+        
+        // Special moves UI
+        yPos = 80;
+        GUI.color = powerPunchReady ? Color.green : Color.red;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 140, 25), 
+                  $"💪 POWER [Q]: {(powerPunchReady ? "READY" : Mathf.CeilToInt(powerPunchTimer) + "s")}");
+        
+        yPos += 30;
+        GUI.color = roundhouseKickReady ? Color.green : Color.red;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 140, 25), 
+                  $"🌀 KICK [E]: {(roundhouseKickReady ? "READY" : Mathf.CeilToInt(roundhouseKickTimer) + "s")}");
+        
+        yPos += 30;
+        GUI.color = groundSlamReady ? Color.green : Color.red;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 140, 25), 
+                  $"🌍 SLAM [R]: {(groundSlamReady ? "READY" : Mathf.CeilToInt(groundSlamTimer) + "s")}");
+        
+        yPos += 30;
+        GUI.color = (ultimateReady && currentCombo >= ultimateRequiredCombo) ? Color.cyan : Color.gray;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 180, 25), 
+                  $"✨ ULTIMATE [F]: {(ultimateReady && currentCombo >= ultimateRequiredCombo ? "READY!" : $"Need {ultimateRequiredCombo - currentCombo} combo")}");
+        
+        // Dash and Roll UI
+        yPos += 40;
+        GUI.color = dashReady ? Color.cyan : Color.gray;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 140, 25), 
+                  $"⚡ DASH [Shift]: {(dashReady ? "READY" : Mathf.CeilToInt(dashTimer) + "s")}");
+        
+        yPos += 30;
+        GUI.color = rollReady ? Color.magenta : Color.gray;
+        GUI.Label(new Rect(Screen.width - 150, yPos, 140, 25), 
+                  $"🌀 ROLL [C]: {(rollReady ? "READY" : Mathf.CeilToInt(rollTimer) + "s")}");
+        
+        GUI.color = Color.white;
     }
     
     void OnCollisionStay(Collision collision)
