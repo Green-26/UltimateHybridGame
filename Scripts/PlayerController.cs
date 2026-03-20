@@ -96,6 +96,13 @@ public class PlayerController : MonoBehaviour
         currentSpeed = walkSpeed;
         currentHealth = maxHealth;
         animator = GetComponent<Animator>();
+        
+        // Initialize UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+            UIManager.Instance.ShowVehicleUI(false);
+        }
     }
     
     void Update()
@@ -119,6 +126,11 @@ public class PlayerController : MonoBehaviour
         if (Time.time - lastAttackTime > comboTimeWindow)
         {
             currentCombo = 0;
+            // Update UI when combo resets
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateCombo(currentCombo);
+            }
         }
         
         HandleMovement();
@@ -137,6 +149,11 @@ public class PlayerController : MonoBehaviour
                 powerPunchReady = true;
                 Debug.Log("POWER PUNCH READY!");
             }
+            // Update UI cooldown
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateSpecialMoveCooldown("PowerPunch", powerPunchTimer, powerPunchCooldown);
+            }
         }
         
         if (!roundhouseKickReady)
@@ -146,6 +163,10 @@ public class PlayerController : MonoBehaviour
             {
                 roundhouseKickReady = true;
                 Debug.Log("ROUNDHOUSE KICK READY!");
+            }
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateSpecialMoveCooldown("RoundhouseKick", roundhouseKickTimer, roundhouseKickCooldown);
             }
         }
         
@@ -157,6 +178,10 @@ public class PlayerController : MonoBehaviour
                 groundSlamReady = true;
                 Debug.Log("GROUND SLAM READY!");
             }
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateSpecialMoveCooldown("GroundSlam", groundSlamTimer, groundSlamCooldown);
+            }
         }
         
         if (!ultimateReady)
@@ -166,6 +191,10 @@ public class PlayerController : MonoBehaviour
             {
                 ultimateReady = true;
                 Debug.Log("ULTIMATE MOVE READY!");
+            }
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateSpecialMoveCooldown("Ultimate", ultimateTimer, ultimateCooldown);
             }
         }
         
@@ -324,6 +353,12 @@ public class PlayerController : MonoBehaviour
             currentCombo = 1;
         }
         lastAttackTime = Time.time;
+        
+        // Update UI combo display
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateCombo(currentCombo);
+        }
     }
     
     void PerformAttack(string attackName, float damage, float range)
@@ -400,6 +435,12 @@ public class PlayerController : MonoBehaviour
         
         // Knockback effect
         rb.AddForce(transform.forward * 500f, ForceMode.Impulse);
+        
+        // Update UI cooldown
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateSpecialMoveCooldown("PowerPunch", powerPunchTimer, powerPunchCooldown);
+        }
     }
     
     void RoundhouseKick()
@@ -433,6 +474,12 @@ public class PlayerController : MonoBehaviour
         }
         
         Debug.Log($"🌀 ROUNDHOUSE KICK! Hit {enemiesHit} enemies for {roundhouseKickDamage} damage! 🌀");
+        
+        // Update UI cooldown
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateSpecialMoveCooldown("RoundhouseKick", roundhouseKickTimer, roundhouseKickCooldown);
+        }
     }
     
     void GroundSlam()
@@ -451,6 +498,12 @@ public class PlayerController : MonoBehaviour
         // Jump then slam
         rb.AddForce(Vector3.up * 5f, ForceMode.Impulse);
         Invoke("SlamDown", 0.3f);
+        
+        // Update UI cooldown
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateSpecialMoveCooldown("GroundSlam", groundSlamTimer, groundSlamCooldown);
+        }
     }
     
     void SlamDown()
@@ -509,6 +562,14 @@ public class PlayerController : MonoBehaviour
         
         // Reset combo after ultimate
         currentCombo = 0;
+        
+        // Update UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateCombo(currentCombo);
+            UIManager.Instance.UpdateSpecialMoveCooldown("Ultimate", ultimateTimer, ultimateCooldown);
+            UIManager.Instance.ShowNotification($"ULTIMATE! {enemiesHit} ENEMIES DESTROYED!");
+        }
         
         Debug.Log($"✨ ULTIMATE MOVE! {enemiesHit} enemies destroyed for {ultimateDamage} damage! ✨");
     }
@@ -692,6 +753,14 @@ public class PlayerController : MonoBehaviour
         // Reset combo when hit
         currentCombo = 0;
         
+        // Update UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+            UIManager.Instance.ShowDamageFlash();
+            UIManager.Instance.UpdateCombo(currentCombo);
+        }
+        
         // Check for death
         if (currentHealth <= 0)
         {
@@ -703,11 +772,22 @@ public class PlayerController : MonoBehaviour
     {
         isDead = true;
         Debug.Log("💀 GAME OVER! 💀");
+        
+        // Show game over UI
+        if (UIManager.Instance)
+        {
+            int finalScore = GameManager.Instance ? GameManager.Instance.score : 0;
+            UIManager.Instance.ShowGameOver(finalScore);
+        }
+        
         enabled = false;
     }
     
     void OnGUI()
     {
+        // Fallback UI if UIManager doesn't exist
+        if (UIManager.Instance != null) return;
+        
         if (isDead) return;
         
         float yPos = 10;

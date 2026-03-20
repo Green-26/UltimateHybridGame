@@ -91,6 +91,7 @@ public class VehicleController : MonoBehaviour
     private bool isBraking = false;
     private Camera playerCamera;
     private AudioSource audioSource;
+    private bool isPlayerInside = false;
     
     void Start()
     {
@@ -122,6 +123,16 @@ public class VehicleController : MonoBehaviour
         if (shieldVisual)
             shieldVisual.SetActive(false);
         
+        // Initialize UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateVehicleHealth(currentHealth, maxHealth);
+            UIManager.Instance.UpdateMachineGunAmmo(machineGunAmmo, maxMachineGunAmmo);
+            UIManager.Instance.UpdateRocketAmmo(rocketAmmo, maxRocketAmmo);
+            UIManager.Instance.UpdateMineAmmo(mineAmmo, maxMineAmmo);
+            UIManager.Instance.UpdateCurrentWeapon("Machine Gun");
+        }
+        
         Debug.Log("Vehicle armed and ready!");
     }
     
@@ -134,10 +145,13 @@ public class VehicleController : MonoBehaviour
         HandleNitrous();
         UpdateShield();
         UpdateUI();
+        HandleEnterExit();
     }
     
     void HandleDriving()
     {
+        if (!isPlayerInside) return;
+        
         float accelerate = Input.GetAxis("Vertical");
         float turn = Input.GetAxis("Horizontal");
         
@@ -183,6 +197,8 @@ public class VehicleController : MonoBehaviour
     
     void HandleWeapons()
     {
+        if (!isPlayerInside) return;
+        
         // Machine Gun (Left Mouse)
         if (hasMachineGun && Input.GetMouseButton(0) && machineGunAmmo > 0)
         {
@@ -221,6 +237,76 @@ public class VehicleController : MonoBehaviour
         {
             ActivateShield();
         }
+        
+        // Weapon Switch (1, 2, 3 keys)
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            if (UIManager.Instance) UIManager.Instance.UpdateCurrentWeapon("Machine Gun");
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            if (UIManager.Instance) UIManager.Instance.UpdateCurrentWeapon("Rocket");
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            if (UIManager.Instance) UIManager.Instance.UpdateCurrentWeapon("Mine");
+        }
+    }
+    
+    void HandleEnterExit()
+    {
+        // Enter vehicle (E key when near)
+        if (Input.GetKeyDown(KeyCode.E) && !isPlayerInside)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player && Vector3.Distance(transform.position, player.transform.position) < 3f)
+            {
+                EnterVehicle(player);
+            }
+        }
+        
+        // Exit vehicle (F key when inside)
+        if (Input.GetKeyDown(KeyCode.F) && isPlayerInside)
+        {
+            ExitVehicle();
+        }
+    }
+    
+    void EnterVehicle(GameObject player)
+    {
+        isPlayerInside = true;
+        player.SetActive(false);
+        transform.parent = null;
+        
+        // Show vehicle UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowVehicleUI(true);
+            UIManager.Instance.ShowNotification("Entered Vehicle - E to exit");
+        }
+        
+        Debug.Log("Player entered vehicle!");
+    }
+    
+    void ExitVehicle()
+    {
+        isPlayerInside = false;
+        
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player)
+        {
+            player.transform.position = transform.position + transform.right * 2f;
+            player.SetActive(true);
+        }
+        
+        // Hide vehicle UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowVehicleUI(false);
+            UIManager.Instance.ShowNotification("Exited Vehicle");
+        }
+        
+        Debug.Log("Player exited vehicle!");
     }
     
     void ShootMachineGun()
@@ -266,6 +352,12 @@ public class VehicleController : MonoBehaviour
         }
         
         Debug.Log($"Machine Gun fired! Ammo: {machineGunAmmo}/{maxMachineGunAmmo}");
+        
+        // Update UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateMachineGunAmmo(machineGunAmmo, maxMachineGunAmmo);
+        }
     }
     
     void ShootRocket()
@@ -304,6 +396,12 @@ public class VehicleController : MonoBehaviour
         }
         
         Debug.Log($"Rocket fired! Ammo: {rocketAmmo}/{maxRocketAmmo}");
+        
+        // Update UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateRocketAmmo(rocketAmmo, maxRocketAmmo);
+        }
     }
     
     void DropMine()
@@ -331,6 +429,12 @@ public class VehicleController : MonoBehaviour
         }
         
         Debug.Log($"Mine dropped! Ammo: {mineAmmo}/{maxMineAmmo}");
+        
+        // Update UI
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateMineAmmo(mineAmmo, maxMineAmmo);
+        }
     }
     
     IEnumerator RamAttack()
@@ -367,6 +471,12 @@ public class VehicleController : MonoBehaviour
         // Visual effect
         StartCoroutine(CameraShake(0.2f, 0.2f));
         
+        // Show notification
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowNotification("RAM ATTACK!");
+        }
+        
         yield return new WaitForSeconds(0.3f);
         isRamming = false;
     }
@@ -377,7 +487,11 @@ public class VehicleController : MonoBehaviour
         if (shieldVisual)
             shieldVisual.SetActive(true);
         
-        // Auto deactivate after shield is depleted
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowNotification("SHIELD ACTIVATED!");
+        }
+        
         Debug.Log("Shield activated!");
     }
     
@@ -393,12 +507,24 @@ public class VehicleController : MonoBehaviour
                     currentShieldHealth = maxShieldHealth;
             }
             
+            // Update UI shield
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateShield(currentShieldHealth, maxShieldHealth);
+            }
+            
             // Deactivate if depleted
             if (currentShieldHealth <= 0)
             {
                 shieldActive = false;
                 if (shieldVisual)
                     shieldVisual.SetActive(false);
+                
+                if (UIManager.Instance)
+                {
+                    UIManager.Instance.ShowNotification("SHIELD DEPLETED!");
+                }
+                
                 Debug.Log("Shield depleted!");
             }
         }
@@ -407,7 +533,7 @@ public class VehicleController : MonoBehaviour
     void HandleNitrous()
     {
         // Nitrous Boost (Left Shift)
-        if (hasNitrous && Input.GetKeyDown(KeyCode.LeftShift) && nitrousReady && !nitrousActive)
+        if (hasNitrous && Input.GetKeyDown(KeyCode.LeftShift) && nitrousReady && !nitrousActive && isPlayerInside)
         {
             StartCoroutine(ActivateNitrous());
         }
@@ -419,6 +545,10 @@ public class VehicleController : MonoBehaviour
             if (nitrousTimer <= 0f)
             {
                 nitrousReady = true;
+                if (UIManager.Instance)
+                {
+                    UIManager.Instance.ShowNotification("NITROUS READY!");
+                }
                 Debug.Log("Nitrous ready!");
             }
         }
@@ -439,11 +569,22 @@ public class VehicleController : MonoBehaviour
         // Visual effect
         StartCoroutine(CameraShake(0.1f, 0.15f));
         
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowNotification("NITROUS BOOST!");
+        }
+        
         Debug.Log("NITROUS BOOST ACTIVATED!");
         
         yield return new WaitForSeconds(nitrousDuration);
         
         nitrousActive = false;
+        
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowNotification("NITROUS DEPLETED");
+        }
+        
         Debug.Log("Nitrous boost ended");
     }
     
@@ -468,7 +609,12 @@ public class VehicleController : MonoBehaviour
     
     void UpdateUI()
     {
-        // UI will be handled by UIManager later
+        if (UIManager.Instance && isPlayerInside)
+        {
+            UIManager.Instance.UpdateVehicleHealth(currentHealth, maxHealth);
+            UIManager.Instance.UpdateSpeed(currentSpeed);
+            UIManager.Instance.UpdateShield(currentShieldHealth, maxShieldHealth);
+        }
     }
     
     void OnCollisionEnter(Collision collision)
@@ -488,6 +634,12 @@ public class VehicleController : MonoBehaviour
             // Impact force on vehicle
             Vector3 impactForce = -collision.contacts[0].normal * ramForce * 0.5f;
             rb.AddForce(impactForce);
+            
+            // Show collision notification
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.ShowNotification("CRASH!");
+            }
         }
     }
     
@@ -528,6 +680,13 @@ public class VehicleController : MonoBehaviour
             {
                 audioSource.PlayOneShot(hitSound);
             }
+            
+            // Update UI
+            if (UIManager.Instance)
+            {
+                UIManager.Instance.UpdateVehicleHealth(currentHealth, maxHealth);
+                UIManager.Instance.ShowDamageFlash();
+            }
         }
         
         if (currentHealth <= 0)
@@ -556,12 +715,17 @@ public class VehicleController : MonoBehaviour
         // Camera shake
         StartCoroutine(CameraShake(0.5f, 0.5f));
         
-        // Find player and eject
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player)
+        // Show notification
+        if (UIManager.Instance)
         {
-            player.transform.position = transform.position + Vector3.up * 2f;
-            player.SetActive(true);
+            UIManager.Instance.ShowNotification("VEHICLE DESTROYED!");
+            UIManager.Instance.ShowVehicleUI(false);
+        }
+        
+        // Eject player
+        if (isPlayerInside)
+        {
+            ExitVehicle();
         }
         
         Destroy(gameObject, 0.5f);
@@ -573,14 +737,23 @@ public class VehicleController : MonoBehaviour
         {
             case "machinegun":
                 machineGunAmmo = Mathf.Min(machineGunAmmo + amount, maxMachineGunAmmo);
+                if (UIManager.Instance) UIManager.Instance.UpdateMachineGunAmmo(machineGunAmmo, maxMachineGunAmmo);
                 break;
             case "rocket":
                 rocketAmmo = Mathf.Min(rocketAmmo + amount, maxRocketAmmo);
+                if (UIManager.Instance) UIManager.Instance.UpdateRocketAmmo(rocketAmmo, maxRocketAmmo);
                 break;
             case "mine":
                 mineAmmo = Mathf.Min(mineAmmo + amount, maxMineAmmo);
+                if (UIManager.Instance) UIManager.Instance.UpdateMineAmmo(mineAmmo, maxMineAmmo);
                 break;
         }
+        
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.ShowNotification($"+{amount} {ammoType} Ammo!");
+        }
+        
         Debug.Log($"Added {amount} {ammoType} ammo!");
     }
     
@@ -593,5 +766,10 @@ public class VehicleController : MonoBehaviour
     {
         if (!hasShield) return 0f;
         return currentShieldHealth / maxShieldHealth;
+    }
+    
+    public bool IsPlayerInside()
+    {
+        return isPlayerInside;
     }
 }
