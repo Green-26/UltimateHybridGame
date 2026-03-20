@@ -4,6 +4,12 @@
 
 Follow these steps to set up your game in Unity.
 
+![Version](https://img.shields.io/badge/version-1.0-blue)
+![Unity](https://img.shields.io/badge/Unity-2022.3-black)
+![Made by](https://img.shields.io/badge/Made%20by-Bertin%20ABIJURU-orange)
+
+**Created by Bertin ABIJURU** | [GitHub](https://github.com/Bertin-26) | [Instagram](https://instagram.com/bertin_tonic880)
+
 ---
 
 ## 📋 Prerequisites
@@ -269,8 +275,25 @@ In UIManager Inspector, drag all UI elements into their corresponding slots.
 
 Once everything is set up, press Play and enjoy your Ultimate Hybrid Game!
 
-**Questions?** Check the [GitHub Repository](https://github.com/YOURUSERNAME/UltimateHybridGame)
+---
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/Bertin-26/UltimateHybridGame)
+- [Follow on Instagram](https://instagram.com/bertin_tonic880)
+
+---
+
+## 📝 Documentation
+
+**Created by: Bertin ABIJURU**
+
+For questions, issues, or suggestions:
+- GitHub: [Bertin-26](https://github.com/Bertin-26)
+- Instagram: [@bertin_tonic880](https://instagram.com/bertin_tonic880)
 
 ---
 
 *Happy Gaming!* 🚀
+
+© 2026 Bertin ABIJURU
