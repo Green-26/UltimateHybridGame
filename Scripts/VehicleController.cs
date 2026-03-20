@@ -468,6 +468,12 @@ public class VehicleController : MonoBehaviour
             }
         }
         
+        // Camera shake on ram
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.2f, 0.2f);
+        }
+        
         // Visual effect
         StartCoroutine(CameraShake(0.2f, 0.2f));
         
@@ -564,6 +570,12 @@ public class VehicleController : MonoBehaviour
         if (nitrousSound && audioSource)
         {
             audioSource.PlayOneShot(nitrousSound);
+        }
+        
+        // Camera shake on nitrous
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.OnVehicleBoost();
         }
         
         // Visual effect
@@ -681,6 +693,12 @@ public class VehicleController : MonoBehaviour
                 audioSource.PlayOneShot(hitSound);
             }
             
+            // Camera shake on damage
+            if (CameraController.Instance)
+            {
+                CameraController.Instance.ShakeCamera(0.15f, 0.1f);
+            }
+            
             // Update UI
             if (UIManager.Instance)
             {
@@ -710,6 +728,12 @@ public class VehicleController : MonoBehaviour
         if (explosionSound && audioSource)
         {
             audioSource.PlayOneShot(explosionSound);
+        }
+        
+        // Camera shake on destruction
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.OnExplosion(transform.position);
         }
         
         // Camera shake

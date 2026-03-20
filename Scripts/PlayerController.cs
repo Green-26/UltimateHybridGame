@@ -524,8 +524,11 @@ public class PlayerController : MonoBehaviour
             }
         }
         
-        // Camera shake effect
-        StartCoroutine(CameraShake());
+        // Camera shake for ground slam
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.3f, 0.2f);
+        }
         
         Debug.Log($"🌍 GROUND SLAM! {groundSlamDamage} damage in radius! 🌍");
     }
@@ -562,6 +565,12 @@ public class PlayerController : MonoBehaviour
         
         // Reset combo after ultimate
         currentCombo = 0;
+        
+        // Camera shake on ultimate
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.5f, 0.3f);
+        }
         
         // Update UI
         if (UIManager.Instance)
@@ -716,28 +725,6 @@ public class PlayerController : MonoBehaviour
         Destroy(trail, 0.1f);
     }
     
-    IEnumerator CameraShake()
-    {
-        Camera mainCam = Camera.main;
-        if (mainCam)
-        {
-            Vector3 originalPos = mainCam.transform.localPosition;
-            float shakeTime = 0.2f;
-            float shakeAmount = 0.1f;
-            
-            float elapsed = 0f;
-            while (elapsed < shakeTime)
-            {
-                float x = Random.Range(-shakeAmount, shakeAmount);
-                float y = Random.Range(-shakeAmount, shakeAmount);
-                mainCam.transform.localPosition = originalPos + new Vector3(x, y, 0);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-            mainCam.transform.localPosition = originalPos;
-        }
-    }
-    
     public void TakeDamage(float amount)
     {
         if (isDead) return;
@@ -752,6 +739,12 @@ public class PlayerController : MonoBehaviour
         
         // Reset combo when hit
         currentCombo = 0;
+        
+        // Camera shake on damage
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.OnPlayerDamage();
+        }
         
         // Update UI
         if (UIManager.Instance)

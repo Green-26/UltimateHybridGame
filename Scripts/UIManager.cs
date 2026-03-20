@@ -147,6 +147,13 @@ public class UIManager : MonoBehaviour
     IEnumerator DamageFlashCoroutine()
     {
         damageOverlay.color = new Color(1, 0, 0, 0.5f);
+        
+        // Camera shake on damage
+        if (CameraController.Instance)
+        {
+            CameraController.Instance.ShakeCamera(0.2f, 0.15f);
+        }
+        
         yield return new WaitForSeconds(damageFlashDuration);
         damageOverlay.color = new Color(1, 0, 0, 0);
     }
