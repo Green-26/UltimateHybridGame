@@ -11,9 +11,22 @@ public class PlayerController : MonoBehaviour
     public float punchDamage = 15f;
     public float punchRange = 2f;
     
+    [Header("Health")]
+    public float maxHealth = 100f;
+    public float currentHealth;
+    public bool isDead = false;
+    public float invincibilityDuration = 1f;
+    private float invincibilityTimer = 0f;
+    private bool isInvincible = false;
+    
+    [Header("UI")]
+    public float healthBarWidth = 200f;
+    public float healthBarHeight = 20f;
+    
     private Rigidbody rb;
     private float currentSpeed;
     private bool isGrounded;
+    private Animator animator;
     
     void Start()
     {
@@ -22,10 +35,24 @@ public class PlayerController : MonoBehaviour
             rb = gameObject.AddComponent<Rigidbody>();
         
         currentSpeed = walkSpeed;
+        currentHealth = maxHealth;
+        animator = GetComponent<Animator>();
     }
     
     void Update()
     {
+        // Handle invincibility frames
+        if (isInvincible)
+        {
+            invincibilityTimer -= Time.deltaTime;
+            if (invincibilityTimer <= 0f)
+            {
+                isInvincible = false;
+            }
+        }
+        
+        if (isDead) return;
+        
         // Movement
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
@@ -68,6 +95,50 @@ public class PlayerController : MonoBehaviour
                 Debug.Log("HIT ENEMY!");
             }
         }
+    }
+    
+    public void TakeDamage(float amount)
+    {
+        if (isDead) return;
+        if (isInvincible) return;
+        
+        currentHealth -= amount;
+        Debug.Log($"Player took {amount} damage! Health: {currentHealth}/{maxHealth}");
+        
+        // Start invincibility frames
+        isInvincible = true;
+        invincibilityTimer = invincibilityDuration;
+        
+        // Check for death
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+    
+    void Die()
+    {
+        isDead = true;
+        Debug.Log("GAME OVER! Player has died.");
+        
+        // Disable player movement
+        enabled = false;
+    }
+    
+    void OnGUI()
+    {
+        if (isDead) return;
+        
+        // Health bar background
+        GUI.Box(new Rect(10, 10, healthBarWidth, healthBarHeight), "");
+        
+        // Health bar fill
+        float healthPercent = currentHealth / maxHealth;
+        GUI.backgroundColor = Color.red;
+        GUI.Box(new Rect(10, 10, healthBarWidth * healthPercent, healthBarHeight), "");
+        
+        // Health text
+        GUI.Label(new Rect(15, 12, 100, 20), $"{currentHealth}/{maxHealth}");
     }
     
     void OnCollisionStay(Collision collision)

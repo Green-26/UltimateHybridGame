@@ -2,12 +2,15 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+    [Header("Stats")]
     public float health = 50f;
     public float damage = 10f;
     public float attackRange = 1.5f;
     public float speed = 3f;
+    public float attackCooldown = 1f;
     
     private Transform player;
+    private float lastAttackTime = 0f;
     
     void Start()
     {
@@ -28,7 +31,21 @@ public class Enemy : MonoBehaviour
         // Attack if in range
         if (Vector3.Distance(transform.position, player.position) < attackRange)
         {
-            Debug.Log("ENEMY ATTACKS!");
+            Attack();
+        }
+    }
+    
+    void Attack()
+    {
+        if (Time.time - lastAttackTime < attackCooldown) return;
+        
+        lastAttackTime = Time.time;
+        Debug.Log("ENEMY ATTACKS!");
+        
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        if (playerController)
+        {
+            playerController.TakeDamage(damage);
         }
     }
     
