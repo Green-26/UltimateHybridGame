@@ -103,6 +103,12 @@ public class PlayerController : MonoBehaviour
             UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
             UIManager.Instance.ShowVehicleUI(false);
         }
+        
+        // Play gameplay music
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlayMusic("Gameplay");
+        }
     }
     
     void Update()
@@ -239,6 +245,12 @@ public class PlayerController : MonoBehaviour
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             isGrounded = false;
+            
+            // Play jump sound
+            if (AudioManager.Instance)
+            {
+                AudioManager.Instance.PlaySFX("Jump");
+            }
         }
     }
     
@@ -354,6 +366,12 @@ public class PlayerController : MonoBehaviour
         }
         lastAttackTime = Time.time;
         
+        // Play combo sound on high combos
+        if (currentCombo >= 3 && AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ComboHit");
+        }
+        
         // Update UI combo display
         if (UIManager.Instance)
         {
@@ -366,6 +384,12 @@ public class PlayerController : MonoBehaviour
         canAttack = false;
         
         if (animator) animator.SetTrigger(attackName);
+        
+        // Play attack sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX(attackName);
+        }
         
         // Combo bonus
         float finalDamage = damage;
@@ -412,6 +436,12 @@ public class PlayerController : MonoBehaviour
         
         if (animator) animator.SetTrigger("PowerPunch");
         
+        // Play special move sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("PowerPunch");
+        }
+        
         // Spawn effect
         if (powerPunchEffect)
         {
@@ -449,6 +479,12 @@ public class PlayerController : MonoBehaviour
         roundhouseKickTimer = roundhouseKickCooldown;
         
         if (animator) animator.SetTrigger("RoundhouseKick");
+        
+        // Play special move sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("RoundhouseKick");
+        }
         
         // Spawn effect
         if (roundhouseKickEffect)
@@ -488,6 +524,12 @@ public class PlayerController : MonoBehaviour
         groundSlamTimer = groundSlamCooldown;
         
         if (animator) animator.SetTrigger("GroundSlam");
+        
+        // Play special move sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("GroundSlam");
+        }
         
         // Spawn effect
         if (groundSlamEffect)
@@ -539,6 +581,12 @@ public class PlayerController : MonoBehaviour
         ultimateTimer = ultimateCooldown;
         
         if (animator) animator.SetTrigger("Ultimate");
+        
+        // Play ultimate sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Ultimate");
+        }
         
         // Spawn effect
         if (ultimateEffect)
@@ -592,6 +640,12 @@ public class PlayerController : MonoBehaviour
         // Set invincible during dash
         isInvincible = true;
         invincibilityTimer = dashDuration;
+        
+        // Play dash sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Dash");
+        }
         
         // Play dash animation
         if (animator) animator.SetTrigger("Dash");
@@ -666,6 +720,12 @@ public class PlayerController : MonoBehaviour
         isInvincible = true;
         invincibilityTimer = rollDuration;
         
+        // Play roll sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Roll");
+        }
+        
         // Play roll animation
         if (animator) animator.SetTrigger("Roll");
         
@@ -733,6 +793,12 @@ public class PlayerController : MonoBehaviour
         currentHealth -= amount;
         Debug.Log($"Player took {amount} damage! Health: {currentHealth}/{maxHealth}");
         
+        // Play damage sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Damage");
+        }
+        
         // Start invincibility frames
         isInvincible = true;
         invincibilityTimer = invincibilityDuration;
@@ -765,6 +831,13 @@ public class PlayerController : MonoBehaviour
     {
         isDead = true;
         Debug.Log("💀 GAME OVER! 💀");
+        
+        // Play death sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Death");
+            AudioManager.Instance.PlayMusic("GameOver");
+        }
         
         // Show game over UI
         if (UIManager.Instance)

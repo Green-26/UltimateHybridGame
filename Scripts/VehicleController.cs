@@ -278,6 +278,13 @@ public class VehicleController : MonoBehaviour
         player.SetActive(false);
         transform.parent = null;
         
+        // Play enter vehicle sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("VehicleEnter");
+            AudioManager.Instance.PlayMusic("Vehicle");
+        }
+        
         // Show vehicle UI
         if (UIManager.Instance)
         {
@@ -297,6 +304,13 @@ public class VehicleController : MonoBehaviour
         {
             player.transform.position = transform.position + transform.right * 2f;
             player.SetActive(true);
+        }
+        
+        // Play exit vehicle sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("VehicleExit");
+            AudioManager.Instance.PlayMusic("Gameplay");
         }
         
         // Hide vehicle UI
@@ -321,10 +335,10 @@ public class VehicleController : MonoBehaviour
             Destroy(flash, 0.1f);
         }
         
-        // Play sound
-        if (machineGunSound && audioSource)
+        // Play machine gun sound
+        if (AudioManager.Instance)
         {
-            audioSource.PlayOneShot(machineGunSound, 0.5f);
+            AudioManager.Instance.PlaySFX("MachineGun");
         }
         
         // Raycast for hit
@@ -365,10 +379,10 @@ public class VehicleController : MonoBehaviour
         lastRocketTime = Time.time;
         rocketAmmo--;
         
-        // Play sound
-        if (rocketSound && audioSource)
+        // Play rocket sound
+        if (AudioManager.Instance)
         {
-            audioSource.PlayOneShot(rocketSound, 0.8f);
+            AudioManager.Instance.PlaySFX("Rocket");
         }
         
         // Spawn rocket
@@ -409,10 +423,10 @@ public class VehicleController : MonoBehaviour
         lastMineTime = Time.time;
         mineAmmo--;
         
-        // Play sound
-        if (mineSound && audioSource)
+        // Play mine drop sound
+        if (AudioManager.Instance)
         {
-            audioSource.PlayOneShot(mineSound, 0.6f);
+            AudioManager.Instance.PlaySFX("MineDrop");
         }
         
         // Spawn mine behind vehicle
@@ -441,6 +455,12 @@ public class VehicleController : MonoBehaviour
     {
         isRamming = true;
         lastRamTime = Time.time;
+        
+        // Play ram sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Ram");
+        }
         
         // Boost forward
         Vector3 ramForceVector = transform.forward * ramForce;
@@ -492,6 +512,12 @@ public class VehicleController : MonoBehaviour
         shieldActive = true;
         if (shieldVisual)
             shieldVisual.SetActive(true);
+        
+        // Play shield activate sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ShieldActivate");
+        }
         
         if (UIManager.Instance)
         {
@@ -566,10 +592,10 @@ public class VehicleController : MonoBehaviour
         nitrousReady = false;
         nitrousTimer = nitrousCooldown;
         
-        // Play sound
-        if (nitrousSound && audioSource)
+        // Play nitrous sound
+        if (AudioManager.Instance)
         {
-            audioSource.PlayOneShot(nitrousSound);
+            AudioManager.Instance.PlaySFX("Nitrous");
         }
         
         // Camera shake on nitrous
@@ -672,6 +698,12 @@ public class VehicleController : MonoBehaviour
                 Instantiate(shieldHitEffect, transform.position, Quaternion.identity);
             }
             
+            // Play shield hit sound
+            if (AudioManager.Instance)
+            {
+                AudioManager.Instance.PlaySFX("ShieldHit");
+            }
+            
             Debug.Log($"Shield took {damageToShield} damage! Shield: {currentShieldHealth}/{maxShieldHealth}");
         }
         
@@ -687,10 +719,10 @@ public class VehicleController : MonoBehaviour
                 Instantiate(hitEffect, transform.position, Quaternion.identity);
             }
             
-            // Play hit sound
-            if (hitSound && audioSource)
+            // Play vehicle damage sound
+            if (AudioManager.Instance)
             {
-                audioSource.PlayOneShot(hitSound);
+                AudioManager.Instance.PlaySFX("VehicleDamage");
             }
             
             // Camera shake on damage
@@ -718,16 +750,16 @@ public class VehicleController : MonoBehaviour
         isDestroyed = true;
         Debug.Log("Vehicle destroyed!");
         
+        // Play explosion sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("VehicleExplosion");
+        }
+        
         // Explosion effect
         if (explosionEffect)
         {
             Instantiate(explosionEffect, transform.position, Quaternion.identity);
-        }
-        
-        // Play explosion sound
-        if (explosionSound && audioSource)
-        {
-            audioSource.PlayOneShot(explosionSound);
         }
         
         // Camera shake on destruction

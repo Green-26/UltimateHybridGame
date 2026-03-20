@@ -219,6 +219,18 @@ public class UIManager : MonoBehaviour
             {
                 highScoreText.text = $"HIGH SCORE: {score}";
             }
+            
+            // Play high score sound
+            if (AudioManager.Instance)
+            {
+                AudioManager.Instance.PlaySFX("HighScore");
+            }
+        }
+        
+        // Play score increase sound on significant gains
+        if (score > 0 && score % 100 == 0 && AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ScoreIncrease");
         }
     }
     
@@ -277,6 +289,12 @@ public class UIManager : MonoBehaviour
         if (machineGunIcon) machineGunIcon.GetComponent<Image>().color = weaponName == "Machine Gun" ? Color.yellow : Color.white;
         if (rocketIcon) rocketIcon.GetComponent<Image>().color = weaponName == "Rocket" ? Color.yellow : Color.white;
         if (mineIcon) mineIcon.GetComponent<Image>().color = weaponName == "Mine" ? Color.yellow : Color.white;
+        
+        // Play weapon switch sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ButtonClick", 0.5f);
+        }
     }
     
     #endregion
@@ -362,6 +380,12 @@ public class UIManager : MonoBehaviour
             
             // Change color when ready
             targetIcon.color = remainingTime <= 0 ? Color.green : Color.gray;
+            
+            // Play ready sound when cooldown completes
+            if (remainingTime <= 0 && remainingTime + Time.deltaTime > 0 && AudioManager.Instance)
+            {
+                AudioManager.Instance.PlaySFX("Notification", 0.6f);
+            }
         }
     }
     
@@ -385,6 +409,13 @@ public class UIManager : MonoBehaviour
     public void ShowWaveStart(int wave)
     {
         ShowNotification($"WAVE {wave} START!");
+        
+        // Play wave start sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("WaveStart");
+        }
+        
         if (waveText)
         {
             waveText.GetComponent<Animator>()?.SetTrigger("Pulse");
@@ -394,6 +425,12 @@ public class UIManager : MonoBehaviour
     public void ShowWaveComplete()
     {
         ShowNotification("WAVE COMPLETE!");
+        
+        // Play wave complete sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("WaveComplete");
+        }
     }
     
     #endregion
@@ -408,6 +445,12 @@ public class UIManager : MonoBehaviour
                 StopCoroutine(notificationCoroutine);
             
             notificationCoroutine = StartCoroutine(ShowNotificationCoroutine(message));
+        }
+        
+        // Play notification sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Notification", 0.7f);
         }
     }
     
@@ -432,6 +475,12 @@ public class UIManager : MonoBehaviour
             bool isPaused = !pausePanel.activeSelf;
             pausePanel.SetActive(isPaused);
             Time.timeScale = isPaused ? 0 : 1;
+            
+            // Play pause/unpause sound
+            if (AudioManager.Instance)
+            {
+                AudioManager.Instance.PlaySFX(isPaused ? "Pause" : "Unpause");
+            }
         }
     }
     
@@ -447,6 +496,12 @@ public class UIManager : MonoBehaviour
             }
         }
         Time.timeScale = 0;
+        
+        // Play game over sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("GameOver");
+        }
     }
     
     public void ResumeGame()
@@ -454,10 +509,22 @@ public class UIManager : MonoBehaviour
         if (pausePanel)
             pausePanel.SetActive(false);
         Time.timeScale = 1;
+        
+        // Play unpause sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Unpause");
+        }
     }
     
     public void RestartGame()
     {
+        // Play button click sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ButtonClick");
+        }
+        
         Time.timeScale = 1;
         UnityEngine.SceneManagement.SceneManager.LoadScene(
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
@@ -465,7 +532,22 @@ public class UIManager : MonoBehaviour
     
     public void QuitGame()
     {
+        // Play button click sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ButtonClick");
+        }
+        
         Application.Quit();
+    }
+    
+    public void OnButtonHover()
+    {
+        // Play hover sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("ButtonHover", 0.4f);
+        }
     }
     
     #endregion

@@ -81,6 +81,18 @@ public class Enemy : MonoBehaviour
         // Set stats based on enemy type
         SetStatsByType();
         
+        // Play spawn sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("EnemySpawn", transform.position);
+            
+            if (enemyType == EnemyType.Boss)
+            {
+                AudioManager.Instance.PlaySFXAtPosition("BossRoar", transform.position, 0.8f);
+                AudioManager.Instance.PlayMusic("Boss");
+            }
+        }
+        
         Debug.Log($"{enemyType} Enemy spawned! Health: {health}, Speed: {speed}, Damage: {damage}");
     }
     
@@ -283,6 +295,12 @@ public class Enemy : MonoBehaviour
         
         if (animator) animator.SetTrigger("Attack");
         
+        // Play attack sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("EnemyAttack", transform.position);
+        }
+        
         // Deal damage after delay
         Invoke("DealDamage", 0.3f);
         
@@ -332,6 +350,12 @@ public class Enemy : MonoBehaviour
         health += healAmount;
         if (health > maxHealth) health = maxHealth;
         
+        // Play heal sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("Heal", transform.position);
+        }
+        
         Debug.Log($"BOSS HEALS! Health: {health}/{maxHealth}");
         
         // Visual effect for healing
@@ -344,6 +368,12 @@ public class Enemy : MonoBehaviour
     void SummonMinions()
     {
         lastSummonTime = Time.time;
+        
+        // Play summon sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("EnemySpawn", transform.position);
+        }
         
         for (int i = 0; i < minionCount; i++)
         {
@@ -368,6 +398,12 @@ public class Enemy : MonoBehaviour
     void AreaAttack()
     {
         lastAreaAttackTime = Time.time;
+        
+        // Play area attack sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("GroundSlam", transform.position);
+        }
         
         // Create visual effect
         StartCoroutine(FlashColor(Color.red, 0.2f));
@@ -427,6 +463,12 @@ public class Enemy : MonoBehaviour
         health -= amount;
         Debug.Log($"{enemyType} enemy took {amount} damage! Health: {health}/{maxHealth}");
         
+        // Play hit sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("EnemyHit", transform.position);
+        }
+        
         // Hit effect
         if (hitEffect)
         {
@@ -446,6 +488,12 @@ public class Enemy : MonoBehaviour
     {
         isDead = true;
         Debug.Log($"{enemyType} enemy defeated!");
+        
+        // Play death sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("EnemyDeath", transform.position);
+        }
         
         // Explosive enemy explodes on death
         if (enemyType == EnemyType.Explosive)
@@ -475,11 +523,23 @@ public class Enemy : MonoBehaviour
             spawnManager.EnemyDied(gameObject);
         }
         
+        // If boss died, switch back to gameplay music
+        if (enemyType == EnemyType.Boss && AudioManager.Instance)
+        {
+            AudioManager.Instance.PlayMusic("Gameplay");
+        }
+        
         Destroy(gameObject, 0.5f);
     }
     
     void Explode()
     {
+        // Play explosion sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFXAtPosition("VehicleExplosion", transform.position);
+        }
+        
         // Damage all enemies and player in radius
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
         foreach (Collider hit in hitColliders)
