@@ -95,10 +95,6 @@ public class AudioManager : MonoBehaviour
     public AudioClip cityAmbientSound;
     public AudioClip forestAmbientSound;
     
-    [Header("Audio Mixing")]
-    public AnimationCurve distanceCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
-    public float maxSoundDistance = 30f;
-    
     private Dictionary<string, AudioClip> soundLibrary = new Dictionary<string, AudioClip>();
     private bool isMusicFading = false;
     private string currentMusicType = "";
@@ -232,11 +228,28 @@ public class AudioManager : MonoBehaviour
     
     void LoadVolumeSettings()
     {
-        masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1f);
-        musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1f);
-        sfxVolume = PlayerPrefs.GetFloat("SFXVolume", 1f);
-        ambientVolume = PlayerPrefs.GetFloat("AmbientVolume", 1f);
-        voiceVolume = PlayerPrefs.GetFloat("VoiceVolume", 1f);
+        // Try to load from SaveSystem first
+        if (SaveSystem.Instance)
+        {
+            masterVolume = SaveSystem.Instance.GetMasterVolume();
+            musicVolume = SaveSystem.Instance.GetMusicVolume();
+            sfxVolume = SaveSystem.Instance.GetSFXVolume();
+            ambientVolume = SaveSystem.Instance.GetAmbientVolume();
+            voiceVolume = SaveSystem.Instance.GetVoiceVolume();
+            
+            Debug.Log("Volume settings loaded from SaveSystem");
+        }
+        else
+        {
+            // Fallback to PlayerPrefs
+            masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+            musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1f);
+            sfxVolume = PlayerPrefs.GetFloat("SFXVolume", 1f);
+            ambientVolume = PlayerPrefs.GetFloat("AmbientVolume", 1f);
+            voiceVolume = PlayerPrefs.GetFloat("VoiceVolume", 1f);
+            
+            Debug.Log("Volume settings loaded from PlayerPrefs");
+        }
         
         ApplyVolumeSettings();
     }
@@ -445,48 +458,123 @@ public class AudioManager : MonoBehaviour
     
     #endregion
     
-    #region Volume Control
+    #region Volume Control with SaveSystem Integration
     
     public void SetMasterVolume(float volume)
     {
         masterVolume = Mathf.Clamp01(volume);
-        PlayerPrefs.SetFloat("MasterVolume", masterVolume);
         ApplyVolumeSettings();
+        
+        // Save to SaveSystem
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SetMasterVolume(masterVolume);
+        }
+        else
+        {
+            // Fallback to PlayerPrefs
+            PlayerPrefs.SetFloat("MasterVolume", masterVolume);
+        }
+        
+        Debug.Log($"Master Volume set to: {masterVolume}");
     }
     
     public void SetMusicVolume(float volume)
     {
         musicVolume = Mathf.Clamp01(volume);
-        PlayerPrefs.SetFloat("MusicVolume", musicVolume);
         ApplyVolumeSettings();
+        
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SetMusicVolume(musicVolume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("MusicVolume", musicVolume);
+        }
+        
+        Debug.Log($"Music Volume set to: {musicVolume}");
     }
     
     public void SetSFXVolume(float volume)
     {
         sfxVolume = Mathf.Clamp01(volume);
-        PlayerPrefs.SetFloat("SFXVolume", sfxVolume);
         ApplyVolumeSettings();
+        
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SetSFXVolume(sfxVolume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("SFXVolume", sfxVolume);
+        }
+        
+        Debug.Log($"SFX Volume set to: {sfxVolume}");
     }
     
     public void SetAmbientVolume(float volume)
     {
         ambientVolume = Mathf.Clamp01(volume);
-        PlayerPrefs.SetFloat("AmbientVolume", ambientVolume);
         ApplyVolumeSettings();
+        
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SetAmbientVolume(ambientVolume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("AmbientVolume", ambientVolume);
+        }
+        
+        Debug.Log($"Ambient Volume set to: {ambientVolume}");
     }
     
     public void SetVoiceVolume(float volume)
     {
         voiceVolume = Mathf.Clamp01(volume);
-        PlayerPrefs.SetFloat("VoiceVolume", voiceVolume);
         ApplyVolumeSettings();
+        
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SetVoiceVolume(voiceVolume);
+        }
+        else
+        {
+            PlayerPrefs.SetFloat("VoiceVolume", voiceVolume);
+        }
+        
+        Debug.Log($"Voice Volume set to: {voiceVolume}");
     }
     
-    public float GetMasterVolume() => masterVolume;
-    public float GetMusicVolume() => musicVolume;
-    public float GetSFXVolume() => sfxVolume;
-    public float GetAmbientVolume() => ambientVolume;
-    public float GetVoiceVolume() => voiceVolume;
+    #endregion
+    
+    #region Getter Methods with SaveSystem
+    
+    public float GetMasterVolume()
+    {
+        return masterVolume;
+    }
+    
+    public float GetMusicVolume()
+    {
+        return musicVolume;
+    }
+    
+    public float GetSFXVolume()
+    {
+        return sfxVolume;
+    }
+    
+    public float GetAmbientVolume()
+    {
+        return ambientVolume;
+    }
+    
+    public float GetVoiceVolume()
+    {
+        return voiceVolume;
+    }
     
     #endregion
 }

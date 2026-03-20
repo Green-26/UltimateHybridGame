@@ -36,11 +36,37 @@ public class GameManager : MonoBehaviour
             return;
         }
         
-        // Load high score from PlayerPrefs
-        highScore = PlayerPrefs.GetInt("HighScore", 0);
+        // Load saved data
+        LoadSavedData();
         
         // Initialize wave
         StartNewWave();
+    }
+    
+    void LoadSavedData()
+    {
+        if (SaveSystem.Instance)
+        {
+            // Load high score from save system
+            highScore = SaveSystem.Instance.GetHighScore();
+            
+            // Load other stats for display
+            int savedEnemies = SaveSystem.Instance.GetTotalEnemiesDefeated();
+            int savedWaves = SaveSystem.Instance.GetTotalWavesCompleted();
+            
+            Debug.Log($"Loaded save data - High Score: {highScore}, Total Enemies: {savedEnemies}, Total Waves: {savedWaves}");
+        }
+        else
+        {
+            // Fallback to PlayerPrefs if SaveSystem not available
+            highScore = PlayerPrefs.GetInt("HighScore", 0);
+        }
+        
+        // Update UI with loaded high score
+        if (UIManager.Instance && highScoreText)
+        {
+            UpdateHighScoreDisplay();
+        }
     }
     
     void Update()
@@ -91,17 +117,38 @@ public class GameManager : MonoBehaviour
             UIManager.Instance.UpdateScore(score);
         }
         
+        // Update save system
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.AddScore(score);
+            highScore = SaveSystem.Instance.GetHighScore();
+            UpdateHighScoreDisplay();
+        }
+        
         // Check high score
         if (score > highScore)
         {
             highScore = score;
-            PlayerPrefs.SetInt("HighScore", highScore);
             
             if (UIManager.Instance)
             {
                 UIManager.Instance.ShowNotification("NEW HIGH SCORE!");
+                UpdateHighScoreDisplay();
             }
+            
+            // Save high score to PlayerPrefs as backup
+            PlayerPrefs.SetInt("HighScore", highScore);
+            
             Debug.Log($"🎉 NEW HIGH SCORE: {highScore} 🎉");
+        }
+    }
+    
+    void UpdateHighScoreDisplay()
+    {
+        if (UIManager.Instance && highScoreText)
+        {
+            // This would need a reference to highScoreText in UIManager
+            // UIManager.Instance.UpdateHighScore(highScore);
         }
     }
     
@@ -112,8 +159,11 @@ public class GameManager : MonoBehaviour
         
         Debug.Log($"Enemy defeated! {enemiesRemainingInWave} enemies remaining in wave {currentWave}");
         
-        // Add score based on enemy type (handled in Enemy.cs)
-        // AddScore is called from Enemy.cs with specific score values
+        // Update save system
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.AddEnemyDefeated();
+        }
         
         // Update UI
         if (UIManager.Instance)
@@ -136,6 +186,12 @@ public class GameManager : MonoBehaviour
         // Bonus points for completing wave
         int waveBonus = 500 * currentWave;
         AddScore(waveBonus);
+        
+        // Update save system with wave completion
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.AddWaveCompleted();
+        }
         
         Debug.Log($"🎉 WAVE {currentWave} COMPLETE! +{waveBonus} BONUS! 🎉");
         
@@ -161,6 +217,15 @@ public class GameManager : MonoBehaviour
         isGameActive = false;
         Debug.Log("🎮 GAME COMPLETE! YOU BEAT ALL WAVES! 🎮");
         
+        // Save final progress
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SaveGame();
+            
+            // Unlock victory achievement
+            SaveSystem.Instance.UnlockAchievement("GameComplete");
+        }
+        
         if (UIManager.Instance)
         {
             UIManager.Instance.ShowNotification("VICTORY! YOU BEAT THE GAME!");
@@ -177,6 +242,12 @@ public class GameManager : MonoBehaviour
     {
         isGameActive = false;
         Debug.Log($"💀 GAME OVER! Final Score: {score} 💀");
+        
+        // Save game on game over
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SaveGame();
+        }
         
         if (UIManager.Instance)
         {
@@ -238,5 +309,25 @@ public class GameManager : MonoBehaviour
     public int GetEnemiesRemaining()
     {
         return enemiesRemainingInWave;
+    }
+    
+    void OnApplicationQuit()
+    {
+        // Save game when quitting
+        if (SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SaveGame();
+            Debug.Log("Game saved on quit!");
+        }
+    }
+    
+    void OnApplicationPause(bool pauseStatus)
+    {
+        // Save game when app is paused (mobile)
+        if (pauseStatus && SaveSystem.Instance)
+        {
+            SaveSystem.Instance.SaveGame();
+            Debug.Log("Game saved on pause!");
+        }
     }
 }
