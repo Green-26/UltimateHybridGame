@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class UIManager : MonoBehaviour
 {
@@ -75,6 +76,11 @@ public class UIManager : MonoBehaviour
     public Text waveText;
     public Text enemiesRemainingText;
     
+    [Header("Leaderboard")]
+    public Text leaderboardText;
+    public GameObject leaderboardPanel;
+    public int leaderboardSize = 5;
+    
     void Awake()
     {
         if (Instance == null)
@@ -88,6 +94,7 @@ public class UIManager : MonoBehaviour
         // Hide all panels initially
         if (pausePanel) pausePanel.SetActive(false);
         if (gameOverPanel) gameOverPanel.SetActive(false);
+        if (leaderboardPanel) leaderboardPanel.SetActive(false);
         
         // Initialize UI
         UpdateHealth(100, 100);
@@ -99,11 +106,10 @@ public class UIManager : MonoBehaviour
         }
         
         // Load high score
-        if (highScoreText)
-        {
-            int highScore = PlayerPrefs.GetInt("HighScore", 0);
-            highScoreText.text = $"HIGH SCORE: {highScore}";
-        }
+        UpdateHighScoreDisplay(PlayerPrefs.GetInt("HighScore", 0));
+        
+        // Load leaderboard
+        UpdateLeaderboardDisplay();
     }
     
     void Update()
@@ -112,6 +118,12 @@ public class UIManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             TogglePause();
+        }
+        
+        // Toggle leaderboard with Tab key
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            ToggleLeaderboard();
         }
     }
     
@@ -215,10 +227,8 @@ public class UIManager : MonoBehaviour
         if (score > highScore)
         {
             PlayerPrefs.SetInt("HighScore", score);
-            if (highScoreText)
-            {
-                highScoreText.text = $"HIGH SCORE: {score}";
-            }
+            PlayerPrefs.Save();
+            UpdateHighScoreDisplay(score);
             
             // Play high score sound
             if (AudioManager.Instance)
@@ -231,6 +241,14 @@ public class UIManager : MonoBehaviour
         if (score > 0 && score % 100 == 0 && AudioManager.Instance)
         {
             AudioManager.Instance.PlaySFX("ScoreIncrease");
+        }
+    }
+    
+    public void UpdateHighScoreDisplay(int highScore)
+    {
+        if (highScoreText)
+        {
+            highScoreText.text = $"HIGH SCORE: {highScore}";
         }
     }
     
@@ -466,6 +484,118 @@ public class UIManager : MonoBehaviour
     
     #endregion
     
+    #region Leaderboard System
+    
+    public void SaveHighScore(int score)
+    {
+        // Get existing scores
+        string scoresString = PlayerPrefs.GetString("Leaderboard", "");
+        List<int> scores = new List<int>();
+        
+        if (!string.IsNullOrEmpty(scoresString))
+        {
+            string[] parts = scoresString.Split(',');
+            foreach (string part in parts)
+            {
+                if (int.TryParse(part, out int s))
+                {
+                    scores.Add(s);
+                }
+            }
+        }
+        
+        // Add new score
+        scores.Add(score);
+        
+        // Sort descending and keep top scores
+        scores.Sort((a, b) => b.CompareTo(a));
+        while (scores.Count > leaderboardSize)
+        {
+            scores.RemoveAt(scores.Count - 1);
+        }
+        
+        // Save back
+        string newScoresString = string.Join(",", scores);
+        PlayerPrefs.SetString("Leaderboard", newScoresString);
+        PlayerPrefs.Save();
+        
+        // Update display
+        UpdateLeaderboardDisplay();
+        
+        Debug.Log($"Saved score {score} to leaderboard!");
+    }
+    
+    public void UpdateLeaderboardDisplay()
+    {
+        if (leaderboardText == null) return;
+        
+        string scoresString = PlayerPrefs.GetString("Leaderboard", "");
+        List<int> scores = new List<int>();
+        
+        if (!string.IsNullOrEmpty(scoresString))
+        {
+            string[] parts = scoresString.Split(',');
+            foreach (string part in parts)
+            {
+                if (int.TryParse(part, out int s))
+                {
+                    scores.Add(s);
+                }
+            }
+        }
+        
+        // Sort descending
+        scores.Sort((a, b) => b.CompareTo(a));
+        
+        // Build display text
+        string displayText = "🏆 HIGH SCORES 🏆\n\n";
+        
+        if (scores.Count > 0)
+        {
+            for (int i = 0; i < scores.Count && i < leaderboardSize; i++)
+            {
+                string medal = "";
+                if (i == 0) medal = "🥇 ";
+                else if (i == 1) medal = "🥈 ";
+                else if (i == 2) medal = "🥉 ";
+                else medal = "   ";
+                
+                displayText += $"{medal}{i + 1}. {scores[i]}\n";
+            }
+        }
+        else
+        {
+            displayText += "No scores yet!\n";
+            displayText += "Play to set a record!";
+        }
+        
+        leaderboardText.text = displayText;
+    }
+    
+    public void ToggleLeaderboard()
+    {
+        if (leaderboardPanel)
+        {
+            bool isActive = !leaderboardPanel.activeSelf;
+            leaderboardPanel.SetActive(isActive);
+            
+            if (isActive)
+            {
+                UpdateLeaderboardDisplay();
+                
+                // Pause game when leaderboard is open
+                Time.timeScale = 0f;
+            }
+            else
+            {
+                // Resume game when leaderboard closes
+                Time.timeScale = 1f;
+            }
+        }
+    }
+    
+    #endregion
+    
     #region Pause & Game Over
     
     public void TogglePause()
@@ -502,6 +632,9 @@ public class UIManager : MonoBehaviour
         {
             AudioManager.Instance.PlaySFX("GameOver");
         }
+        
+        // Save to leaderboard
+        SaveHighScore(finalScore);
     }
     
     public void ResumeGame()
