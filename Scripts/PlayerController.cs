@@ -8,6 +8,12 @@ public class PlayerController : MonoBehaviour
     public float runSpeed = 10f;
     public float jumpForce = 8f;
     
+    [Header("Movement Smoothing")]
+    public float acceleration = 12f;      // How fast you reach full speed
+    public float deceleration = 15f;      // How fast you stop
+    private Vector3 currentVelocity;      // Current movement speed
+    private Vector3 targetVelocity;       // Target movement speed
+    
     [Header("Combat")]
     public float punchDamage = 15f;
     public float punchRange = 2f;
@@ -116,6 +122,10 @@ public class PlayerController : MonoBehaviour
             GameObject effectManager = new GameObject("EffectManager");
             effectManager.AddComponent<EffectManager>();
         }
+        
+        // Initialize velocity
+        currentVelocity = Vector3.zero;
+        targetVelocity = Vector3.zero;
     }
     
     void Update()
@@ -238,8 +248,16 @@ public class PlayerController : MonoBehaviour
         float vertical = Input.GetAxis("Vertical");
         
         Vector3 moveDirection = new Vector3(horizontal, 0, vertical).normalized;
-        Vector3 move = moveDirection * currentSpeed * Time.deltaTime;
-        transform.Translate(move, Space.World);
+        
+        // Target velocity based on input and current speed
+        targetVelocity = moveDirection * currentSpeed;
+        
+        // Smooth acceleration and deceleration
+        float smoothSpeed = (moveDirection.magnitude > 0.1f) ? acceleration : deceleration;
+        currentVelocity = Vector3.Lerp(currentVelocity, targetVelocity, smoothSpeed * Time.deltaTime);
+        
+        // Apply movement
+        transform.Translate(currentVelocity * Time.deltaTime, Space.World);
         
         // Run with Left Shift
         if (Input.GetKey(KeyCode.LeftShift) && !isDashing && !isRolling)
@@ -258,6 +276,12 @@ public class PlayerController : MonoBehaviour
             {
                 AudioManager.Instance.PlaySFX("Jump");
             }
+        }
+        
+        // Visual feedback - dust particles when moving fast
+        if (EffectManager.Instance && currentVelocity.magnitude > 5f && isGrounded && moveDirection.magnitude > 0.1f)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position + Vector3.down * 0.5f, 0.1f);
         }
     }
     
@@ -888,6 +912,52 @@ public class PlayerController : MonoBehaviour
         }
     }
     
+    public void Heal(float amount)
+    {
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.UpdateHealth(currentHealth, maxHealth);
+        }
+        
+        // Play heal sound
+        if (AudioManager.Instance)
+        {
+            AudioManager.Instance.PlaySFX("Heal");
+        }
+        
+        // Spawn heal effect
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Heal", transform.position);
+        }
+        
+        Debug.Log($"Player healed! Health: {currentHealth}/{maxHealth}");
+    }
+    
+    public IEnumerator TemporarySpeedBoost(float duration)
+    {
+        float originalRunSpeed = runSpeed;
+        float originalWalkSpeed = walkSpeed;
+        
+        runSpeed *= 1.5f;
+        walkSpeed *= 1.5f;
+        
+        // Visual feedback
+        if (EffectManager.Instance)
+        {
+            EffectManager.Instance.SpawnEffect("Smoke", transform.position, duration);
+        }
+        
+        yield return new WaitForSeconds(duration);
+        
+        runSpeed = originalRunSpeed;
+        walkSpeed = originalWalkSpeed;
+        
+        Debug.Log("Speed boost ended!");
+    }
+    
     void Die()
     {
         isDead = true;
@@ -920,6 +990,11 @@ public class PlayerController : MonoBehaviour
         }
         
         enabled = false;
+    }
+    
+    public float GetHealthPercent()
+    {
+        return currentHealth / maxHealth;
     }
     
     void OnGUI()
