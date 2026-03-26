@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,6 +22,11 @@ public class GameManager : MonoBehaviour
     [Header("Game State")]
     public bool isGameActive = true;
     public bool isGamePaused = false;
+    
+    [Header("Power-Up Spawning")]
+    public GameObject[] powerUpPrefabs;
+    public float powerUpSpawnChance = 0.3f; // 30% chance when enemy dies
+    public float powerUpSpawnRadius = 5f;
     
     void Awake()
     {
@@ -63,9 +69,9 @@ public class GameManager : MonoBehaviour
         }
         
         // Update UI with loaded high score
-        if (UIManager.Instance && highScoreText)
+        if (UIManager.Instance)
         {
-            UpdateHighScoreDisplay();
+            UIManager.Instance.UpdateHighScoreDisplay(highScore);
         }
     }
     
@@ -122,7 +128,6 @@ public class GameManager : MonoBehaviour
         {
             SaveSystem.Instance.AddScore(score);
             highScore = SaveSystem.Instance.GetHighScore();
-            UpdateHighScoreDisplay();
         }
         
         // Check high score
@@ -133,22 +138,14 @@ public class GameManager : MonoBehaviour
             if (UIManager.Instance)
             {
                 UIManager.Instance.ShowNotification("NEW HIGH SCORE!");
-                UpdateHighScoreDisplay();
+                UIManager.Instance.UpdateHighScoreDisplay(highScore);
             }
             
             // Save high score to PlayerPrefs as backup
             PlayerPrefs.SetInt("HighScore", highScore);
+            PlayerPrefs.Save();
             
             Debug.Log($"🎉 NEW HIGH SCORE: {highScore} 🎉");
-        }
-    }
-    
-    void UpdateHighScoreDisplay()
-    {
-        if (UIManager.Instance && highScoreText)
-        {
-            // This would need a reference to highScoreText in UIManager
-            // UIManager.Instance.UpdateHighScore(highScore);
         }
     }
     
@@ -233,10 +230,42 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    public void EnemySpawned()
+    // ============================================
+    // POWER-UP SPAWNING SYSTEM
+    // ============================================
+    
+    public void TrySpawnPowerUp(Vector3 position)
     {
-        // Track total enemies spawned if needed
+        if (powerUpPrefabs == null || powerUpPrefabs.Length == 0) 
+        {
+            Debug.Log("No power-up prefabs assigned!");
+            return;
+        }
+        
+        // Random chance to spawn power-up
+        if (Random.value > powerUpSpawnChance) return;
+        
+        // Pick random power-up
+        int randomIndex = Random.Range(0, powerUpPrefabs.Length);
+        GameObject powerUpPrefab = powerUpPrefabs[randomIndex];
+        
+        if (powerUpPrefab)
+        {
+            // Random offset so power-ups don't stack
+            Vector3 randomOffset = new Vector3(
+                Random.Range(-powerUpSpawnRadius, powerUpSpawnRadius),
+                0.5f,
+                Random.Range(-powerUpSpawnRadius, powerUpSpawnRadius)
+            );
+            
+            Instantiate(powerUpPrefab, position + randomOffset, Quaternion.identity);
+            Debug.Log($"Power-up spawned at {position + randomOffset}");
+        }
     }
+    
+    // ============================================
+    // GAME STATE METHODS
+    // ============================================
     
     public void GameOver()
     {
@@ -247,6 +276,12 @@ public class GameManager : MonoBehaviour
         if (SaveSystem.Instance)
         {
             SaveSystem.Instance.SaveGame();
+        }
+        
+        // Save to leaderboard
+        if (UIManager.Instance)
+        {
+            UIManager.Instance.SaveHighScore(score);
         }
         
         if (UIManager.Instance)
@@ -291,6 +326,15 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    public void EnemySpawned()
+    {
+        // Track total enemies spawned if needed
+    }
+    
+    // ============================================
+    // GETTER METHODS
+    // ============================================
+    
     public int GetScore()
     {
         return score;
@@ -310,6 +354,10 @@ public class GameManager : MonoBehaviour
     {
         return enemiesRemainingInWave;
     }
+    
+    // ============================================
+    // APPLICATION EVENTS
+    // ============================================
     
     void OnApplicationQuit()
     {
