@@ -562,6 +562,14 @@ public class Enemy : MonoBehaviour
             Instantiate(deathEffect, transform.position, Quaternion.identity);
         }
         
+        // ========== POWER-UP SPAWN ==========
+        // Spawn power-up on death (30% chance handled in GameManager)
+        if (GameManager.Instance)
+        {
+            GameManager.Instance.TrySpawnPowerUp(transform.position);
+        }
+        // ===================================
+        
         // Add score
         GameManager gameManager = FindObjectOfType<GameManager>();
         if (gameManager)
