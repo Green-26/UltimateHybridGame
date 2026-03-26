@@ -1,3 +1,9 @@
+// ============================================
+// Ultimate Hybrid Game - Player Controller
+// Copyright (c) 2026 Bertin ABIJURU
+// All Rights Reserved
+// ============================================
+
 using UnityEngine;
 
 public class RocketProjectile : MonoBehaviour
